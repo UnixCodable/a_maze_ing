@@ -6,7 +6,7 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/03/21 03:32:25 by lbordana        #+#    #+#               #
-#  Updated: 2026/03/22 02:40:01 by lbordana        ###   ########.fr        #
+#  Updated: 2026/03/22 14:31:57 by lbordana        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -33,6 +33,7 @@ class MazeVisualizer(Mlx):
         self.win_ptr = self.mlx_new_window(self.mlx_ptr, width, height, "a maze ing")
         self.background = None
         self.decor = None
+        self.logo = None
 
     def generate_maze():
         pass
@@ -54,9 +55,10 @@ class ConvertingTools():
         return [bin(int(h, 16))[2:].zfill(4) for h in hexa]
 
 
-def convert() -> None:
+def convert() -> List:
     hexa = ConvertingTools().hex_recover()
     binary = ConvertingTools().hex_to_bin(hexa)
+    return binary
 
 
 def image_constitution(path, m) -> ImgData:
@@ -75,7 +77,7 @@ def image_constitution(path, m) -> ImgData:
 
 def maze_visualizer() -> None:
     convert()
-    width = 1900
+    width = 1920
     height = 1080
     m = MazeVisualizer(width, height)
     m.mlx_hook(m.win_ptr, 33, 0, m.clic, m)
@@ -84,8 +86,10 @@ def maze_visualizer() -> None:
         for h in range(0, height, 32):
             m.mlx_put_image_to_window(m.mlx_ptr, m.win_ptr, m.background.id, w, h)
             sleep(0.00001)
-    m.decor = image_constitution("themes/pokemon/decor.png", m)
-    m.mlx_put_image_to_window(m.mlx_ptr, m.win_ptr, m.decor.id, 30, 30)
+    m.wall = image_constitution("themes/pokemon/wall.png", m)
+    m.logo = image_constitution("themes/pokemon/logo.png", m)
+    m.mlx_put_image_to_window(m.mlx_ptr, m.win_ptr, m.wall.id, 30, 30)
+    m.mlx_put_image_to_window(m.mlx_ptr, m.win_ptr, m.logo.id, int((width / 2) - (m.logo.width / 2)), 30)
     m.mlx_loop(m.mlx_ptr)
 
 
