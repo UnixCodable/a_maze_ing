@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, model_validator, ValidationError
+from pydantic import BaseModel, Field, model_validator
 from typing import Tuple, Optional
 
 
@@ -78,5 +78,8 @@ def read_config(filename: str) -> dict:
 
 if __name__ == "__main__":
     di = read_config("default_config.txt")
-    config = MazeConfig(**di)
-    print(config)
+    try:
+        config = MazeConfig(**di)
+        print(config)
+    except Exception as e:
+        print(f"{e}")
