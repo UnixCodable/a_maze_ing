@@ -6,7 +6,7 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/03/21 03:32:25 by lbordana        #+#    #+#               #
-#  Updated: 2026/03/23 18:17:16 by lbordana        ###   ########.fr        #
+#  Updated: 2026/03/24 05:46:03 by lbordana        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -14,14 +14,7 @@ from mlx import Mlx
 from typing import List
 from PIL import Image
 from time import sleep
-
-
-def generator():  # Temporary output simalution of the algorithm
-    with open('output_maze.txt', 'r') as output:
-        data = [hex for hex in output.read().split('\n')[:-5]]
-    for row in data:
-        for col in row:
-            yield col
+from data_test import generation
 
 
 class ImgData():
@@ -47,75 +40,79 @@ class MazeVisualizer(Mlx):
         self.mlx_ptr = self.mlx_init()
         self.win_ptr = self.mlx_new_window(self.mlx_ptr, width, height, 
                                            "A_maze_ing : Game poetry")
-        # self.background = image_constitution(f"themes/{theme}/background.png", self)
-        self.wall = image_constitution(f"themes/{theme}/wall.png", self)
-        self.logo = image_constitution(f"themes/{theme}/logo.png", self)
         self.grid = []
 
-    def generate_maze(self):
+    def generate_floor(self):
         start_pos = (int((self.width / 2) - ((self.maze_width / 2) * self.tilesize * 2)),
-                     int(self.logo.height + 128 + 100))
-        pos = [start_pos[0], start_pos[1]]
-        patchwork = Image.open(f"themes/{self.theme}/path.png")
-        path = Image.new('RGB', ((self.maze_width * 2 + 1) * self.tilesize,
-                                 (self.maze_height * 2 + 1) * self.tilesize))
-        path_width, path_height = path.size()
-        for w in path_width:
-            for h in path_height:
+                     int(500))
+        patchwork = Image.open(f"themes/{self.theme}/path_patch.png")
+        path = Image.new('RGBA',
+                         ((self.maze_width * 2 + 1) * self.tilesize,
+                          (self.maze_height * 2 + 1) * self.tilesize),
+                         (255, 0, 0, 0))
+        path_width, path_height = path.size
+        for w in range(0, path_width, self.tilesize):
+            for h in range(0, path_height, self.tilesize):
                 path.paste(patchwork, (w, h))
-        path.save(f"themes/{m.theme}/path.png")
-        path = image_constitution(f"themes/{m.theme}/path.png", self)
-        self.mlx_put_image_to_window()
-        for gen in generator():
-            binary = bin(int(gen, 16))[2:].zfill(4)
-            self.grid.append([pos[0], pos[1], binary])
-            if int(binary[-1])
-            
-            
-            
-        # for data in self.binary:
-        #     follow += 1
-        #     self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.path.id, pos[0], pos[1])
-        #     if int(data[-1]) == 1:
-        #         self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.wall.id, pos[0], pos[1] - 32)
-        #         self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.wall.id, pos[0] - 32, pos[1] - 32)
-        #         self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.wall.id, pos[0] + 32, pos[1] - 32)
-        #     else:
-        #         self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.path.id, pos[0], pos[1] - 32)
-        #     if int(data[-2]) == 1:
-        #         self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.wall.id, pos[0] + 32, pos[1])
-        #         self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.wall.id, pos[0] + 32, pos[1] - 32)
-        #         self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.wall.id, pos[0] + 32, pos[1] + 32)
-        #     else:
-        #         self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.path.id, pos[0] + 32, pos[1])
-        #     if int(data[-3]) == 1:
-        #         self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.wall.id, pos[0], pos[1] + 32)
-        #         self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.wall.id, pos[0] - 32, pos[1] + 32)
-        #         self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.wall.id, pos[0] + 32, pos[1] + 32)
-        #     else:
-        #         self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.path.id, pos[0], pos[1] + 32)
-        #     if int(data[-4]) == 1:
-        #         self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.wall.id, pos[0] - 32, pos[1])
-        #         self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.wall.id, pos[0] - 32, pos[1] - 32)
-        #         self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.wall.id, pos[0] - 32, pos[1] + 32)
-        #     else:
-        #         self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.path.id, pos[0] - 32, pos[1])
-        #     if follow == maze[0]:
-        #         pos[0] = int(start_pos[0])
-        #         pos[1] += 64
-        #         follow = 0
-        #     else:
-        #         pos[0] += 64
-        #     self.mlx_sync(self.mlx_ptr, self.SYNC_WIN_COMPLETED, self.win_ptr)
+        path.save(f"themes/{self.theme}/path.png")
+        new_path = image_constitution(f"themes/{self.theme}/path.png", self)
+        self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, new_path.id, start_pos[0], start_pos[1])
+        self.mlx_destroy_image(self.mlx_ptr, new_path.id)
+
+    def generate_walls(self, data=None):
+        start_pos = (int((self.width / 2) - ((self.maze_width / 2) * self.tilesize * 2)),
+                     int(500))
+        appending = True
+        if data is None:
+            data = self.grid
+            appending = False
+        for d in data:
+            binary = bin(int(d[2], 16))[2:].zfill(4)
+            if appending is True:
+                self.grid.append([d[0], d[1], d[2]])
+            pos = [start_pos[0] + d[0] * (self.tilesize * 2),
+                   start_pos[1] + d[1] * (self.tilesize * 2)]
+            wall_tile = Image.open(f"themes/{self.theme}/wall_patch.png")
+            path_tile = Image.open(f"themes/{self.theme}/path_patch.png")
+            wall_mask = Image.new('RGBA', (self.tilesize * 3,
+                                           self.tilesize * 3), (255, 0, 0, 0))
+            wall_mask.paste(path_tile, (self.tilesize, 0))
+            wall_mask.paste(path_tile, (self.tilesize * 2, self.tilesize))
+            wall_mask.paste(path_tile, (self.tilesize, self.tilesize * 2))
+            wall_mask.paste(path_tile, (0, self.tilesize))
+            if int(binary[-1]) == 1:
+                wall_mask.paste(wall_tile, (0, 0))
+                wall_mask.paste(wall_tile, (self.tilesize, 0))
+                wall_mask.paste(wall_tile, (self.tilesize * 2, 0))
+            if int(binary[-2]) == 1:
+                wall_mask.paste(wall_tile, (self.tilesize * 2, 0))
+                wall_mask.paste(wall_tile, (self.tilesize * 2, self.tilesize))
+                wall_mask.paste(wall_tile, (self.tilesize * 2, self.tilesize * 2))
+            if int(binary[-3]) == 1:
+                wall_mask.paste(wall_tile, (0, self.tilesize * 2))
+                wall_mask.paste(wall_tile, (self.tilesize, self.tilesize * 2))
+                wall_mask.paste(wall_tile, (self.tilesize * 2, self.tilesize * 2))
+            if int(binary[-4]) == 1:
+                wall_mask.paste(wall_tile, (0, 0))
+                wall_mask.paste(wall_tile, (0, self.tilesize))
+                wall_mask.paste(wall_tile, (0, self.tilesize * 2))
+            wall_mask.save(f"themes/{self.theme}/wall.png")
+            walls = image_constitution(f"themes/{self.theme}/wall.png", self)
+            self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, walls.id, pos[0], pos[1])
+            self.mlx_destroy_image(self.mlx_ptr, walls.id)
+
+    def generate_ways(self, data=None):
+        start = (int((self.width / 2) - ((self.maze_width / 2) * self.tilesize * 2)),
+                 int(500))
+        entrance_way = [start[0] + d * (self.tilesize * 2) for d in data[0]]
+        exit_way = [start[0] + d * (self.tilesize * 2) for d in data[1]]
+        entrance = image_constitution(f"themes/{self.theme}/entrance.png", self)
+        self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, entrance.id, entrance_way[0], entrance_way[1])
+        exiting = image_constitution(f"themes/{self.theme}/exit.png", self)
+        self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, exiting.id, exit_way[0], exit_way[1])
 
 
-# def collage_generator(m: Mlx):
-#     path_img = Image.open(f"themes/{theme}/path.png")
-#     wall_img = Image.open(f"themes/{theme}/wall.png")
-#     patchwork = Image.new
-
-
-def image_constitution(path, m) -> ImgData:
+def image_constitution(path, m: Mlx) -> ImgData:
     img_convert = m.mlx_png_file_to_image(m.mlx_ptr, path)
     img_id, img_width, img_height = img_convert
     img_data, img_bpp, img_sl, img_iformat = m.mlx_get_data_addr(img_id)
@@ -142,34 +139,49 @@ def base_assets(m: MazeVisualizer):
             background.paste(patchwork, (w, h))
     background.save(f"themes/{m.theme}/background.png")
     new_background = image_constitution(f"themes/{m.theme}/background.png", m)
+    logo = image_constitution(f"themes/{m.theme}/logo.png", m)
     m.mlx_put_image_to_window(m.mlx_ptr, m.win_ptr, new_background.id, 0, 0)
-    m.mlx_put_image_to_window(m.mlx_ptr, m.win_ptr, m.logo.id, int((m.width / 2) - (m.logo.width / 2)), 100)
+    m.mlx_put_image_to_window(m.mlx_ptr, m.win_ptr, logo.id, int((m.width / 2) - (logo.width / 2)), 100)
+    m.mlx_destroy_image(m.mlx_ptr, new_background.id)
+    m.mlx_destroy_image(m.mlx_ptr, logo.id)
 
 
 def change_theme(keynum, m: MazeVisualizer):
-    theme = ['pokemon', 'fallout', 'minecraft']
+    theme = ['classic', 'classic_red', 'pokemon', 'fallout', 'minecraft']
     if keynum == 116:
         try:
             m.theme = theme[theme.index(m.theme) + 1]
         except IndexError:
             m.theme = theme[0]
-        m.mlx_clear_window(m.mlx_ptr, m.win_ptr)
-        m.wall = image_constitution(f"themes/{m.theme}/wall.png", m)
-        m.logo = image_constitution(f"themes/{m.theme}/logo.png", m)
-        m.path = image_constitution(f"themes/{m.theme}/path.png", m)
         base_assets(m)
-        m.generate_maze()
+        m.generate_floor()
+        m.generate_walls()
+
+
+def generator():  # Temporary output simalution of the algorithm
+    with open('output_maze.txt', 'r') as output:
+        data = [hex for hex in output.read().split('\n')[:-5]]
+    for row in data:
+        for col in row:
+            yield col
 
 
 def maze_visualizer() -> None:
     width = 3840
     height = 2160
-    theme = 'minecraft'
+    theme = 'classic'
     m = MazeVisualizer(width, height, theme)
     m.mlx_key_hook(m.win_ptr, change_theme, m)
     base_assets(m)
-    m.generate_maze()
-    m.mlx_sync(m.mlx_ptr, m.SYNC_WIN_COMPLETED, m.win_ptr)
+    # m.mlx_sync(m.mlx_ptr, m.SYNC_WIN_COMPLETED, m.win_ptr)
+    m.generate_floor()
+    # with open('output_maze.txt', 'r') as output:
+    #     data = [hex for hex in output.read().split('\n')[:-5]]
+    # for row_nbr, row in enumerate(data):
+    #     for col_nbr, col in enumerate(row):
+    #         m.generate_walls([[col_nbr, row_nbr, col]])
+    m.generate_walls(generation)
+    # m.generate_ways([[2, 3], [16, 18]])
     m.mlx_hook(m.win_ptr, 33, 0, close, m)
     m.mlx_loop(m.mlx_ptr)
 
