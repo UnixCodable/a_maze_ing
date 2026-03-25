@@ -2,7 +2,7 @@ PYTHON = python3
 CONFIG = config.txt
 
 install:
-	pip install -r requirements.txt
+	pip install pydantic
 
 run:
 	$(PYTHON) a_maze_ing.py $(CONFIG)
