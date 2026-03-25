@@ -6,21 +6,26 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/03/21 03:32:25 by lbordana        #+#    #+#               #
-#  Updated: 2026/03/25 15:38:00 by lbordana        ###   ########.fr        #
+#  Updated: 2026/03/25 18:21:32 by lbordana        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
-import ctypes
-
 from mlx import Mlx
-# from numpy import array
 from PIL import Image, ImageDraw, ImageText, ImageFont
+from ctypes import c_void_p, c_int, byref, memmove
+from io import BytesIO
 from time import sleep
-import ctypes
 from data_test import generation
-import faulthandler
 
-faulthandler.enable()
+def parsed_data():
+    parsed = []
+    with open("maze.txt", 'r') as file:
+        data = file.readlines()[:20]
+        for nb_d, d in enumerate(data):
+            for nb_char, char in enumerate(d[:-1]):
+                parsed.append([nb_char, nb_d, d[nb_char]])
+    print(parsed)
+    return parsed        
 
 
 class ImgData():
@@ -46,6 +51,8 @@ class ImgData():
                         img_sl,
                         img_iformat)
         return image
+    
+    def image_to_memory(self, mlx_ptr, image_pil):
 
 
 class MazeVisualizer(Mlx):
@@ -237,18 +244,17 @@ class Controler(MazeVisualizer):
                 base_assets(self)
                 self.generate_floor()
                 self.snapshot.save(f"themes/{self.theme}/snapshot.png")
-                snap = ImgData.image_constitution(f"themes/{self.theme}/snapshot.png", self)
+                snap = ImgData.image_constitution(f, self)
                 self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, snap.id, 0, 0 - self.view_port)
-        self.mlx_mouse_hook(self.win_ptr, self.mouse_commands, self)
 
     @staticmethod
     def dig(self):
         if self.running_state is False:
             return
         try:
-            # for _ in range(5):
             sleep(self.speed)
             next(self.wall_builder)
+            print(f"View port actuel : {self.view_port}")
         except StopIteration:
             pass
 
@@ -271,12 +277,10 @@ def base_assets(m: MazeVisualizer):
     m.mlx_destroy_image(m.mlx_ptr, logo.id)
 
 
-def controler(m: Mlx):
-    m.mlx_hook(m.win_ptr, 33, 0, m.close, m)
-    m.mlx_key_hook(m.win_ptr, m.keyboard_commands, m)
-    m.mlx_mouse_hook(m.win_ptr, m.mouse_commands, m)
-    if m.running_state is True:
-        m.mlx_loop_hook(m.mlx_ptr, m.dig, m)
+# def controler(m: Mlx):
+
+#     if m.running_state is True:
+#         pass
 
 
 def maze_visualizer() -> None:
@@ -288,7 +292,12 @@ def maze_visualizer() -> None:
     m.generate_floor()
     # m.generate_ways([[2, 3], [16, 18]])
     # m.generate_walls(generation)
-    m.mlx_loop_hook(m.mlx_ptr, controler, m)
+    m.mlx_hook(m.win_ptr, 33, 0, m.close, m)
+    m.mlx_key_hook(m.win_ptr, m.keyboard_commands, m)
+    m.mlx_mouse_hook(m.win_ptr, m.mouse_commands, m)
+        
+    m.mlx_loop_hook(m.mlx_ptr, m.dig, m)
+    # m.mlx_loop_hook(m.mlx_ptr, controler, m)
     m.mlx_loop(m.mlx_ptr)
 
 
