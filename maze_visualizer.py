@@ -6,9 +6,11 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/03/21 03:32:25 by lbordana        #+#    #+#               #
-#  Updated: 2026/03/25 02:49:30 by lbordana        ###   ########.fr        #
+#  Updated: 2026/03/25 13:04:23 by lbordana        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
+
+from email.mime import base
 
 from mlx import Mlx
 from PIL import Image, ImageDraw, ImageText, ImageFont
@@ -52,8 +54,10 @@ class MazeVisualizer(Mlx):
         self.width = width
         self.height = height
         self.mlx_ptr = self.mlx_init()
-        self.win_ptr = self.mlx_new_window(self.mlx_ptr, width, height, 
+        self.win_ptr = self.mlx_new_window(self.mlx_ptr, width, height,
                                            "A_maze_ing : Game poetry")
+        self.view_port = 0
+        self.snapshot = Image.new('RGBA', (self.width, self.height), (255, 0, 0, 0))
         self.grid = []
 
     # def generate_menu
@@ -73,7 +77,8 @@ class MazeVisualizer(Mlx):
                 path.paste(path_wall_patch, (w, h))
         path.save(f"themes/{self.theme}/path.png")
         new_path = ImgData.image_constitution(f"themes/{self.theme}/path.png", self)
-        self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, new_path.id, start_pos[0], start_pos[1])
+        self.snapshot.paste(Image.open(f"themes/{self.theme}/path.png"), (start_pos[0], start_pos[1] - self.view_port))
+        self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, new_path.id, start_pos[0], start_pos[1] - self.view_port)
         self.mlx_destroy_image(self.mlx_ptr, new_path.id)
 
     def generate_walls(self, data=None):
@@ -114,7 +119,8 @@ class MazeVisualizer(Mlx):
                 wall_mask.paste(path_tile, (0, self.tilesize))
             wall_mask.save(f"themes/{self.theme}/wall.png")
             walls = ImgData.image_constitution(f"themes/{self.theme}/wall.png", self)
-            self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, walls.id, pos[0], pos[1])
+            self.snapshot.paste(Image.open(f"themes/{self.theme}/wall.png"), (pos[0], pos[1] - self.view_port))
+            self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, walls.id, pos[0], pos[1] - self.view_port)
             self.mlx_destroy_image(self.mlx_ptr, walls.id)
             yield None
 
@@ -150,6 +156,7 @@ class Controler(MazeVisualizer):
                 background.paste(patchwork, (w, h))
         background.save(f"themes/{m.theme}/eraser.png")
         new_eraser = ImgData.image_constitution(f"themes/{m.theme}/eraser.png", m)
+        m.snapshot.paste(Image.open(f"themes/{m.theme}/eraser.png"), (0, 0 - m.view_port))
         m.mlx_put_image_to_window(m.mlx_ptr, m.win_ptr, new_eraser.id, 0, 0)
         m.mlx_destroy_image(m.mlx_ptr, new_eraser.id)
 
@@ -162,13 +169,14 @@ class Controler(MazeVisualizer):
         image.save(f"themes/{self.theme}/text.png")
 
     @staticmethod
-    def commands(keynum, self: MazeVisualizer):
+    def keyboard_commands(keynum, self: MazeVisualizer):
         print(f"You've pressed key number : {keynum}")
         if keynum == 32 and self.running_state is True:
             self.erase_text(self)
             self.console_text('PAUSE', 60, self)
             text = ImgData.image_constitution(f"themes/{self.theme}/text.png", self)
-            self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, text.id, 100, 100)
+            self.snapshot.paste(Image.open(f"themes/{self.theme}/text.png"), (100, 100 - self.view_port))
+            self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, text.id, 100, 100 - self.view_port)
             self.mlx_destroy_image(self.mlx_ptr, text.id)
             self.running_state = False
             return
@@ -182,7 +190,8 @@ class Controler(MazeVisualizer):
                 self.erase_text(self)
                 self.console_text('SPEED ++', 60, self)
                 text = ImgData.image_constitution(f"themes/{self.theme}/text.png", self)
-                self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, text.id, 100, 100)
+                self.snapshot.paste(Image.open(f"themes/{self.theme}/text.png"), (100, 100 - self.view_port))
+                self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, text.id, 100, 100 - self.view_port)
                 self.mlx_destroy_image(self.mlx_ptr, text.id)
         if keynum == 65364:
             if self.speed < 0.04:
@@ -190,7 +199,8 @@ class Controler(MazeVisualizer):
                 self.erase_text(self)
                 self.console_text('SPEED --', 60, self)
                 text = ImgData.image_constitution(f"themes/{self.theme}/text.png", self)
-                self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, text.id, 100, 100)
+                self.snapshot.paste(Image.open(f"themes/{self.theme}/text.png",), (100, 100 - self.view_port))
+                self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, text.id, 100, 100 - self.view_port)
                 self.mlx_destroy_image(self.mlx_ptr, text.id)
         if keynum == 116:
             theme = ['classic',
@@ -207,13 +217,27 @@ class Controler(MazeVisualizer):
             self.wall_builder = self.generate_walls()
 
     @staticmethod
+    def mouse_commands(mouse_num, x, y, self: MazeVisualizer):
+        print(mouse_num, x, y)
+        if mouse_num == 4:
+            if self.view_port > 0:
+                self.view_port -= 50
+                self.snapshot.save(f"themes/{m.themes}/snapshot.png")
+                snap = ImgData.image_constitution(f"themes/{m.themes}/snapshot.png", self)
+                self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, snap.id, 0, 0)
+        if mouse_num == 5:
+            if self.view_port < self.height:
+                self.view_port += 50
+                base_assets(self)
+
+    @staticmethod
     def dig(self):
         if self.running_state is False:
             return
         try:
-            for _ in range(5):
-                sleep(self.speed)
-                next(self.wall_builder)
+            # for _ in range(5):
+            sleep(self.speed)
+            next(self.wall_builder)
         except StopIteration:
             pass
 
@@ -230,17 +254,19 @@ def base_assets(m: MazeVisualizer):
     console.save(f"themes/{m.theme}/console.png")
     new_background = ImgData.image_constitution(f"themes/{m.theme}/background.png", m)
     logo = ImgData.image_constitution(f"themes/{m.theme}/logo.png", m)
+    m.snapshot.paste(Image.open(f"themes/{m.theme}/background.png"), (0, 0))
+    m.snapshot.paste(Image.open(f"themes/{m.theme}/logo.png"), (int((m.width / 2) - (logo.width / 2)), 100))
     m.mlx_put_image_to_window(m.mlx_ptr, m.win_ptr, new_background.id, 0, 0)
-    m.mlx_put_image_to_window(m.mlx_ptr, m.win_ptr, logo.id, int((m.width / 2) - (logo.width / 2)), 100)
+    m.mlx_put_image_to_window(m.mlx_ptr, m.win_ptr, logo.id, int((m.width / 2) - (logo.width / 2)), 100 - m.view_port)
     m.mlx_destroy_image(m.mlx_ptr, new_background.id)
     m.mlx_destroy_image(m.mlx_ptr, logo.id)
 
 
 def controler(m: Mlx):
     m.mlx_hook(m.win_ptr, 33, 0, m.close, m)
-    m.mlx_key_hook(m.win_ptr, m.commands, m)
+    m.mlx_key_hook(m.win_ptr, m.keyboard_commands, m)
+    m.mlx_mouse_hook(m.win_ptr, m.mouse_commands, m)
     if m.running_state is True:
-        print(m.running_state)
         m.mlx_loop_hook(m.mlx_ptr, m.dig, m)
 
 
