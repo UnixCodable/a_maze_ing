@@ -6,15 +6,12 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/03/21 03:32:25 by lbordana        #+#    #+#               #
-#  Updated: 2026/03/24 18:42:59 by lbordana        ###   ########.fr        #
+#  Updated: 2026/03/25 02:49:30 by lbordana        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
-from cProfile import label
-
 from mlx import Mlx
-from typing import List
-from PIL import Image
+from PIL import Image, ImageDraw, ImageText, ImageFont
 from time import sleep
 from data_test import generation
 
@@ -28,6 +25,21 @@ class ImgData():
         self.bpp = bpp
         self.sl = sl
         self.iformat = iformat
+    
+    @staticmethod
+    def image_constitution(path, m: Mlx) -> ImgData:
+        img_convert = m.mlx_png_file_to_image(m.mlx_ptr, path)
+        img_id, img_width, img_height = img_convert
+        img_data, img_bpp, img_sl, img_iformat = m.mlx_get_data_addr(img_id)
+        image = ImgData(img_id,
+                        img_width,
+                        img_height,
+                        img_data,
+                        img_bpp,
+                        img_sl,
+                        img_iformat)
+        return image
+
 
 
 class MazeVisualizer(Mlx):
@@ -60,7 +72,7 @@ class MazeVisualizer(Mlx):
             for h in range(0, path_height, self.tilesize):
                 path.paste(path_wall_patch, (w, h))
         path.save(f"themes/{self.theme}/path.png")
-        new_path = image_constitution(f"themes/{self.theme}/path.png", self)
+        new_path = ImgData.image_constitution(f"themes/{self.theme}/path.png", self)
         self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, new_path.id, start_pos[0], start_pos[1])
         self.mlx_destroy_image(self.mlx_ptr, new_path.id)
 
@@ -101,7 +113,7 @@ class MazeVisualizer(Mlx):
             if int(binary[-4]) == 0:
                 wall_mask.paste(path_tile, (0, self.tilesize))
             wall_mask.save(f"themes/{self.theme}/wall.png")
-            walls = image_constitution(f"themes/{self.theme}/wall.png", self)
+            walls = ImgData.image_constitution(f"themes/{self.theme}/wall.png", self)
             self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, walls.id, pos[0], pos[1])
             self.mlx_destroy_image(self.mlx_ptr, walls.id)
             yield None
@@ -111,28 +123,99 @@ class MazeVisualizer(Mlx):
                  int(500))
         entrance_way = [start[0] + d * (self.tilesize * 2) for d in data[0]]
         exit_way = [start[0] + d * (self.tilesize * 2) for d in data[1]]
-        entrance = image_constitution(f"themes/{self.theme}/entrance.png", self)
+        entrance = ImgData.image_constitution(f"themes/{self.theme}/entrance.png", self)
         self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, entrance.id, entrance_way[0], entrance_way[1])
-        exiting = image_constitution(f"themes/{self.theme}/exit.png", self)
+        exiting = ImgData.image_constitution(f"themes/{self.theme}/exit.png", self)
         self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, exiting.id, exit_way[0], exit_way[1])
 
 
-def image_constitution(path, m: Mlx) -> ImgData:
-    img_convert = m.mlx_png_file_to_image(m.mlx_ptr, path)
-    img_id, img_width, img_height = img_convert
-    img_data, img_bpp, img_sl, img_iformat = m.mlx_get_data_addr(img_id)
-    image = ImgData(img_id,
-                    img_width,
-                    img_height,
-                    img_data,
-                    img_bpp,
-                    img_sl,
-                    img_iformat)
-    return image
+class Controler(MazeVisualizer):
+    def __init__(self, width: int, height: int, theme: str, data: list):
+        super().__init__(width, height, theme)
+        self.wall_builder = self.generate_walls(data)
+        self.speed = 0.1
+        self.running_state = True
 
+    @staticmethod
+    def close(m: Mlx):
+        m.mlx_loop_exit(m.mlx_ptr)
 
-def close(m):
-    m.mlx_loop_exit(m.mlx_ptr)
+    @staticmethod
+    def erase_text(m):
+        patchwork = Image.open(f"themes/{m.theme}/background_patch.png")
+        p_width, p_height = patchwork.size
+        background = Image.new('RGB', (900, 400))
+        for w in range(0, 900, p_width):
+            for h in range(0, 400, p_height):
+                background.paste(patchwork, (w, h))
+        background.save(f"themes/{m.theme}/eraser.png")
+        new_eraser = ImgData.image_constitution(f"themes/{m.theme}/eraser.png", m)
+        m.mlx_put_image_to_window(m.mlx_ptr, m.win_ptr, new_eraser.id, 0, 0)
+        m.mlx_destroy_image(m.mlx_ptr, new_eraser.id)
+
+    @staticmethod
+    def console_text(string: str, font_size: int, self: Mlx):
+        image = Image.new('RGBA', (700, 300), (0, 0, 0, 200))
+        draw = ImageDraw.Draw(image)
+        font = ImageFont.truetype(f'themes/{self.theme}/font.ttf', font_size)
+        draw.text((150, 120), string, font=font)
+        image.save(f"themes/{self.theme}/text.png")
+
+    @staticmethod
+    def commands(keynum, self: MazeVisualizer):
+        print(f"You've pressed key number : {keynum}")
+        if keynum == 32 and self.running_state is True:
+            self.erase_text(self)
+            self.console_text('PAUSE', 60, self)
+            text = ImgData.image_constitution(f"themes/{self.theme}/text.png", self)
+            self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, text.id, 100, 100)
+            self.mlx_destroy_image(self.mlx_ptr, text.id)
+            self.running_state = False
+            return
+        if keynum == 32 and self.running_state is False:
+            self.erase_text(self)
+            self.running_state = True
+            return
+        if keynum == 65362:
+            if self.speed > 0.0001:
+                self.speed /= 3
+                self.erase_text(self)
+                self.console_text('SPEED ++', 60, self)
+                text = ImgData.image_constitution(f"themes/{self.theme}/text.png", self)
+                self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, text.id, 100, 100)
+                self.mlx_destroy_image(self.mlx_ptr, text.id)
+        if keynum == 65364:
+            if self.speed < 0.04:
+                self.speed *= 3
+                self.erase_text(self)
+                self.console_text('SPEED --', 60, self)
+                text = ImgData.image_constitution(f"themes/{self.theme}/text.png", self)
+                self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, text.id, 100, 100)
+                self.mlx_destroy_image(self.mlx_ptr, text.id)
+        if keynum == 116:
+            theme = ['classic',
+                     'classic_red',
+                     'pokemon',
+                     'fallout',
+                     'minecraft']
+            try:
+                self.theme = theme[theme.index(self.theme) + 1]
+            except IndexError:
+                self.theme = theme[0]
+            base_assets(self)
+            self.generate_floor()
+            self.wall_builder = self.generate_walls()
+
+    @staticmethod
+    def dig(self):
+        if self.running_state is False:
+            return
+        try:
+            for _ in range(5):
+                sleep(self.speed)
+                next(self.wall_builder)
+        except StopIteration:
+            pass
 
 
 def base_assets(m: MazeVisualizer):
@@ -143,45 +226,34 @@ def base_assets(m: MazeVisualizer):
         for h in range(0, m.height, p_height):
             background.paste(patchwork, (w, h))
     background.save(f"themes/{m.theme}/background.png")
-    new_background = image_constitution(f"themes/{m.theme}/background.png", m)
-    logo = image_constitution(f"themes/{m.theme}/logo.png", m)
+    console = Image.new('RGBA', (700, 300), (0, 0, 0, 200))
+    console.save(f"themes/{m.theme}/console.png")
+    new_background = ImgData.image_constitution(f"themes/{m.theme}/background.png", m)
+    logo = ImgData.image_constitution(f"themes/{m.theme}/logo.png", m)
     m.mlx_put_image_to_window(m.mlx_ptr, m.win_ptr, new_background.id, 0, 0)
     m.mlx_put_image_to_window(m.mlx_ptr, m.win_ptr, logo.id, int((m.width / 2) - (logo.width / 2)), 100)
     m.mlx_destroy_image(m.mlx_ptr, new_background.id)
     m.mlx_destroy_image(m.mlx_ptr, logo.id)
 
 
-def change_theme(keynum, m: MazeVisualizer):
-    theme = ['classic', 'classic_red', 'pokemon', 'fallout', 'minecraft']
-    if keynum == 116:
-        try:
-            m.theme = theme[theme.index(m.theme) + 1]
-        except IndexError:
-            m.theme = theme[0]
-        base_assets(m)
-        m.generate_floor()
-
-
-def generate_maze(data: tuple):
-    m, gen = data
-    try:
-        for _ in range(10):
-            next(gen)
-    except StopIteration:
-        pass
+def controler(m: Mlx):
+    m.mlx_hook(m.win_ptr, 33, 0, m.close, m)
+    m.mlx_key_hook(m.win_ptr, m.commands, m)
+    if m.running_state is True:
+        print(m.running_state)
+        m.mlx_loop_hook(m.mlx_ptr, m.dig, m)
 
 
 def maze_visualizer() -> None:
     width = 3840
     height = 2160
     theme = 'pokemon'
-    m = MazeVisualizer(width, height, theme)
-    m.mlx_key_hook(m.win_ptr, change_theme, m)
+    m = Controler(width, height, theme, generation)
     base_assets(m)
     m.generate_floor()
     # m.generate_ways([[2, 3], [16, 18]])
-    m.mlx_hook(m.win_ptr, 33, 0, close, m)
-    m.mlx_loop_hook(m.mlx_ptr, generate_maze, (m, m.generate_walls(generation)))
+    # m.generate_walls(generation)
+    m.mlx_loop_hook(m.mlx_ptr, controler, m)
     m.mlx_loop(m.mlx_ptr)
 
 
