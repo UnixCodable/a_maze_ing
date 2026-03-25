@@ -6,16 +6,21 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/03/21 03:32:25 by lbordana        #+#    #+#               #
-#  Updated: 2026/03/25 13:04:23 by lbordana        ###   ########.fr        #
+#  Updated: 2026/03/25 15:38:00 by lbordana        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
-from email.mime import base
+import ctypes
 
 from mlx import Mlx
+# from numpy import array
 from PIL import Image, ImageDraw, ImageText, ImageFont
 from time import sleep
+import ctypes
 from data_test import generation
+import faulthandler
+
+faulthandler.enable()
 
 
 class ImgData():
@@ -29,7 +34,7 @@ class ImgData():
         self.iformat = iformat
     
     @staticmethod
-    def image_constitution(path, m: Mlx) -> ImgData:
+    def image_constitution(path, m: Mlx):
         img_convert = m.mlx_png_file_to_image(m.mlx_ptr, path)
         img_id, img_width, img_height = img_convert
         img_data, img_bpp, img_sl, img_iformat = m.mlx_get_data_addr(img_id)
@@ -41,7 +46,6 @@ class ImgData():
                         img_sl,
                         img_iformat)
         return image
-
 
 
 class MazeVisualizer(Mlx):
@@ -77,7 +81,6 @@ class MazeVisualizer(Mlx):
                 path.paste(path_wall_patch, (w, h))
         path.save(f"themes/{self.theme}/path.png")
         new_path = ImgData.image_constitution(f"themes/{self.theme}/path.png", self)
-        self.snapshot.paste(Image.open(f"themes/{self.theme}/path.png"), (start_pos[0], start_pos[1] - self.view_port))
         self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, new_path.id, start_pos[0], start_pos[1] - self.view_port)
         self.mlx_destroy_image(self.mlx_ptr, new_path.id)
 
@@ -119,7 +122,7 @@ class MazeVisualizer(Mlx):
                 wall_mask.paste(path_tile, (0, self.tilesize))
             wall_mask.save(f"themes/{self.theme}/wall.png")
             walls = ImgData.image_constitution(f"themes/{self.theme}/wall.png", self)
-            self.snapshot.paste(Image.open(f"themes/{self.theme}/wall.png"), (pos[0], pos[1] - self.view_port))
+            self.snapshot.paste(Image.open(f"themes/{self.theme}/wall.png"), (pos[0], pos[1]))
             self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, walls.id, pos[0], pos[1] - self.view_port)
             self.mlx_destroy_image(self.mlx_ptr, walls.id)
             yield None
@@ -215,6 +218,7 @@ class Controler(MazeVisualizer):
             base_assets(self)
             self.generate_floor()
             self.wall_builder = self.generate_walls()
+        self.mlx_key_hook(self.win_ptr, self.keyboard_commands, self)
 
     @staticmethod
     def mouse_commands(mouse_num, x, y, self: MazeVisualizer):
@@ -222,13 +226,20 @@ class Controler(MazeVisualizer):
         if mouse_num == 4:
             if self.view_port > 0:
                 self.view_port -= 50
-                self.snapshot.save(f"themes/{m.themes}/snapshot.png")
-                snap = ImgData.image_constitution(f"themes/{m.themes}/snapshot.png", self)
-                self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, snap.id, 0, 0)
+                base_assets(self)
+                self.generate_floor()
+                self.snapshot.save(f"themes/{self.theme}/snapshot.png")
+                snap = ImgData.image_constitution(f"themes/{self.theme}/snapshot.png", self)
+                self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, snap.id, 0, 0 - self.view_port)
         if mouse_num == 5:
             if self.view_port < self.height:
                 self.view_port += 50
                 base_assets(self)
+                self.generate_floor()
+                self.snapshot.save(f"themes/{self.theme}/snapshot.png")
+                snap = ImgData.image_constitution(f"themes/{self.theme}/snapshot.png", self)
+                self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, snap.id, 0, 0 - self.view_port)
+        self.mlx_mouse_hook(self.win_ptr, self.mouse_commands, self)
 
     @staticmethod
     def dig(self):
@@ -254,8 +265,6 @@ def base_assets(m: MazeVisualizer):
     console.save(f"themes/{m.theme}/console.png")
     new_background = ImgData.image_constitution(f"themes/{m.theme}/background.png", m)
     logo = ImgData.image_constitution(f"themes/{m.theme}/logo.png", m)
-    m.snapshot.paste(Image.open(f"themes/{m.theme}/background.png"), (0, 0))
-    m.snapshot.paste(Image.open(f"themes/{m.theme}/logo.png"), (int((m.width / 2) - (logo.width / 2)), 100))
     m.mlx_put_image_to_window(m.mlx_ptr, m.win_ptr, new_background.id, 0, 0)
     m.mlx_put_image_to_window(m.mlx_ptr, m.win_ptr, logo.id, int((m.width / 2) - (logo.width / 2)), 100 - m.view_port)
     m.mlx_destroy_image(m.mlx_ptr, new_background.id)
