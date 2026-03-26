@@ -6,14 +6,18 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/03/21 03:32:25 by lbordana        #+#    #+#               #
-#  Updated: 2026/03/26 04:11:13 by lbordana        ###   ########.fr        #
+#  Updated: 2026/03/26 17:34:28 by lbordana        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
+from email.mime import image
+
 from mlx import Mlx
 from PIL import Image, ImageDraw, ImageFont
+import numpy as np
 from time import sleep, time
 from data_test import generation
+import io
 import tracemalloc
 
 tracemalloc.start()
@@ -26,7 +30,7 @@ def parsed_data():
             for nb_char, char in enumerate(d[:-1]):
                 parsed.append([nb_char, nb_d, d[nb_char]])
     print(parsed)
-    return parsed        
+    return parsed
 
 
 class ImgData():
@@ -38,7 +42,7 @@ class ImgData():
         self.bpp = bpp
         self.sl = sl
         self.iformat = iformat
-    
+
     @staticmethod
     def image_constitution(path, m: Mlx):
         img_convert = m.mlx_png_file_to_image(m.mlx_ptr, path)
@@ -54,15 +58,20 @@ class ImgData():
         return image
 
 
-def image_to_memory(image_pil, m: Mlx):
-    r, g, b, a = image_pil.split()
-    image_pil = Image.merge("RGBA", (b, g, r, a))
+def create_mlx_image(width, height, m: Mlx):
     mlx_image = ImgData()
-    mlx_image.width, mlx_image.height = image_pil.size
-    mlx_image.id = m.mlx_new_image(m.mlx_ptr, mlx_image.width, mlx_image.height)
+    mlx_image.id = m.mlx_new_image(m.mlx_ptr, width, height)
     mlx_image.data, mlx_image.bpp, mlx_image.sl, mlx_image.iformat = m.mlx_get_data_addr(mlx_image.id)
-    raw_data = image_pil.tobytes()
-    mlx_image.data[:] = raw_data
+    return mlx_image
+
+
+def image_to_memory(image_pil, mlx_image: ImgData):
+    r, g, b, a = image_pil.split()
+    start = time()
+    image_pil = Image.merge("RGBA", (b, g, r, a))
+    mlx_image.data[:] = image_pil.tobytes()
+    end = time()
+    print(end - start)
     return mlx_image
 
 
@@ -82,28 +91,32 @@ class MazeVisualizer(Mlx):
         self.logo = None
         self.background = None
         self.floor = None
-        self.snapshot = []
-        self.wall_tile = Image.open(f"themes/{self.theme}/wall_patch.png")
-        self.path_tile = Image.open(f"themes/{self.theme}/path_patch.png")
+        self.tile = create_mlx_image(self.tilesize * 3, self.tilesize * 3, self)
+        self.snapshot = Image.new('RGBA',
+                                  (self.width, self.height),
+                                  (255, 0, 0, 0))
+        self.snap = create_mlx_image(self.width, self.height, self)
+        self.wall_tile = Image.open(f"themes/{self.theme}/wall_patch.png").convert('RGBA')
+        self.path_tile = Image.open(f"themes/{self.theme}/path_patch.png").convert('RGBA')
+        self.wall_mask = Image.new('RGBA', (self.tilesize * 3,
+                                            self.tilesize * 3), (255, 0, 0, 0))
+        self.path_wall_patch = Image.alpha_composite(self.path_tile, self.wall_tile)
         self.grid = []
 
     def generate_floor(self):
         start_pos = (int((self.width / 2) - ((self.maze_width / 2) * self.tilesize * 2)),
                      int(500))
         if self.floor is None:
-            path_patch = Image.open(f"themes/{self.theme}/path_patch.png").convert('RGBA')
-            wall_patch = Image.open(f"themes/{self.theme}/wall_patch.png").convert('RGBA')
-            path_wall_patch = Image.alpha_composite(path_patch, wall_patch)
-            path = Image.new('RGBA',
-                             ((self.maze_width * 2 + 1) * self.tilesize,
-                              (self.maze_height * 2 + 1) * self.tilesize))
-            path_width, path_height = path.size
-            for w in range(0, path_width, self.tilesize):
-                for h in range(0, path_height, self.tilesize):
-                    path.paste(path_wall_patch, (w, h))
-            self.floor = image_to_memory(path, self)
+            floor = Image.new('RGBA',
+                              ((self.maze_width * 2 + 1) * self.tilesize,
+                               (self.maze_height * 2 + 1) * self.tilesize))
+            floor_width, floor_height = floor.size
+            self.floor = create_mlx_image(floor_width, floor_height, self)
+            for w in range(0, floor_width, self.tilesize):
+                for h in range(0, floor_height, self.tilesize):
+                    floor.paste(self.path_wall_patch, (w, h))
+            image_to_memory(floor, self.floor)
         self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.floor.id, start_pos[0], start_pos[1] - self.view_port)
-        self.mlx_sync(self.mlx_ptr, self.SYNC_IMAGE_WRITABLE, self.floor.id)
 
     def generate_walls(self, data=None):
         start_pos = (int((self.width / 2) - ((self.maze_width / 2) * self.tilesize * 2)),
@@ -124,25 +137,23 @@ class MazeVisualizer(Mlx):
                 self.grid = sorted(self.grid, key=lambda item: int(f'{item[0]}{item[1]}'))
             pos = [start_pos[0] + d[0] * (self.tilesize * 2),
                    start_pos[1] + d[1] * (self.tilesize * 2)]
-            wall_mask = Image.new('RGBA', (self.tilesize * 3,
-                                           self.tilesize * 3), (255, 0, 0, 0))
-            wall_mask.paste(self.wall_tile, (self.tilesize, 0))
-            wall_mask.paste(self.wall_tile, (self.tilesize * 2, self.tilesize))
-            wall_mask.paste(self.wall_tile, (self.tilesize, self.tilesize * 2))
-            wall_mask.paste(self.wall_tile, (0, self.tilesize))
-            wall_mask.paste(self.path_tile, (self.tilesize, self.tilesize))
+            self.wall_mask.paste(self.wall_tile, (self.tilesize, 0))
+            self.wall_mask.paste(self.wall_tile, (self.tilesize * 2, self.tilesize))
+            self.wall_mask.paste(self.wall_tile, (self.tilesize, self.tilesize * 2))
+            self.wall_mask.paste(self.wall_tile, (0, self.tilesize))
+            self.wall_mask.paste(self.path_tile, (self.tilesize, self.tilesize))
             if int(binary[-1]) == 0:
-                wall_mask.paste(self.path_tile, (self.tilesize, 0))
+                self.wall_mask.paste(self.path_tile, (self.tilesize, 0))
             if int(binary[-2]) == 0:
-                wall_mask.paste(self.path_tile, (self.tilesize * 2, self.tilesize))
+                self.wall_mask.paste(self.path_tile, (self.tilesize * 2, self.tilesize))
             if int(binary[-3]) == 0:
-                wall_mask.paste(self.path_tile, (self.tilesize, self.tilesize * 2))
+                self.wall_mask.paste(self.path_tile, (self.tilesize, self.tilesize * 2))
             if int(binary[-4]) == 0:
-                wall_mask.paste(self.path_tile, (0, self.tilesize))
-            walls = image_to_memory(wall_mask, self)
-            self.snapshot.append([walls, pos[0], pos[1]])
-            self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, walls.id, pos[0], pos[1] - self.view_port)
-            # self.mlx_destroy_image(self.mlx_ptr, walls.id)
+                self.wall_mask.paste(self.path_tile, (0, self.tilesize))
+            self.snapshot.paste(self.wall_mask, (pos[0], pos[1]))
+            image_to_memory(self.snapshot, self.snap)
+            self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.snap.id, 0, 0 - self.view_port)
+            # self.mlx_sync(self.mlx_ptr, self.SYNC_IMAGE_WRITABLE, self.snap.id)
             yield None
 
     def generate_ways(self, data=None):
@@ -165,14 +176,9 @@ class Controler(MazeVisualizer):
 
     @staticmethod
     def close(m: Mlx):
-    # try:
         m.mlx_destroy_image(m.mlx_ptr, m.background.id)
         m.mlx_destroy_image(m.mlx_ptr, m.logo.id)
         m.mlx_destroy_image(m.mlx_ptr, m.floor.id)
-        for snap in m.snapshot:
-            m.mlx_destroy_image(m.mlx_ptr, snap[0].id)
-        # except Exception:
-        #     pass
         m.mlx_destroy_window(m.mlx_ptr, m.win_ptr)
         m.mlx_loop_exit(m.mlx_ptr)
 
@@ -184,9 +190,10 @@ class Controler(MazeVisualizer):
         for w in range(0, 900, p_width):
             for h in range(0, 400, p_height):
                 background.paste(patchwork, (w, h))
-        new_eraser = image_to_memory(background, m)
-        m.mlx_put_image_to_window(m.mlx_ptr, m.win_ptr, new_eraser.id, 0, 0)
-        m.mlx_destroy_image(m.mlx_ptr, new_eraser.id)
+        eraser = create_mlx_image(900, 400, m)
+        image_to_memory(background, eraser)
+        m.mlx_put_image_to_window(m.mlx_ptr, m.win_ptr, eraser.id, 0, 0)
+        m.mlx_destroy_image(m.mlx_ptr, eraser.id)
 
     @staticmethod
     def console_text(string: str, font_size: int, self: Mlx):
@@ -202,9 +209,10 @@ class Controler(MazeVisualizer):
         if keynum == 32 and self.running_state is True:
             self.erase_text(self)
             text = self.console_text('PAUSE', 60, self)
-            new_text = image_to_memory(text, self)
-            self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, new_text.id, 100, 100 - self.view_port)
-            self.mlx_destroy_image(self.mlx_ptr, new_text.id)
+            console = create_mlx_image(700, 300, self)
+            image_to_memory(text, console)
+            self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, console.id, 100, 100 - self.view_port)
+            self.mlx_destroy_image(self.mlx_ptr, console.id)
             self.running_state = False
             return
         if keynum == 32 and self.running_state is False:
@@ -216,17 +224,19 @@ class Controler(MazeVisualizer):
                 self.speed /= 3
                 self.erase_text(self)
                 text = self.console_text('SPEED ++', 60, self)
-                new_text = image_to_memory(text, self)
-                self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, new_text.id, 100, 100 - self.view_port)
-                self.mlx_destroy_image(self.mlx_ptr, new_text.id)   
+                console = create_mlx_image(700, 300, self)
+                image_to_memory(text, console)
+                self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, console.id, 100, 100 - self.view_port)
+                self.mlx_destroy_image(self.mlx_ptr, console.id)
         if keynum == 65364:
             if self.speed < 0.04:
                 self.speed *= 3
                 self.erase_text(self)
                 text = self.console_text('SPEED --', 60, self)
-                new_text = image_to_memory(text, self)
-                self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, new_text.id, 100, 100 - self.view_port)
-                self.mlx_destroy_image(self.mlx_ptr, new_text.id)   
+                console = create_mlx_image(700, 300, self)
+                image_to_memory(text, console)
+                self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, console.id, 100, 100 - self.view_port)
+                self.mlx_destroy_image(self.mlx_ptr, console.id) 
         if keynum == 116:
             #  Change the theme of th visualizer
             theme = ['classic',
@@ -238,8 +248,8 @@ class Controler(MazeVisualizer):
                 self.theme = theme[theme.index(self.theme) + 1]
             except IndexError:
                 self.theme = theme[0]
-            self.wall_tile = Image.open(f"themes/{self.theme}/wall_patch.png")
-            self.path_tile = Image.open(f"themes/{self.theme}/path_patch.png")
+            self.wall_tile = Image.open(f"themes/{self.theme}/wall_patch.png").convert('RGBA')
+            self.path_tile = Image.open(f"themes/{self.theme}/path_patch.png").convert('RGBA')
             self.mlx_destroy_image(self.mlx_ptr, self.background.id)
             self.mlx_destroy_image(self.mlx_ptr, self.logo.id)
             self.mlx_destroy_image(self.mlx_ptr, self.floor.id)
@@ -247,6 +257,7 @@ class Controler(MazeVisualizer):
             self.logo = None
             self.floor = None
             base_assets(self)
+            self.path_wall_patch = Image.alpha_composite(self.path_tile, self.wall_tile)
             self.generate_floor()
             self.wall_builder = self.generate_walls()
 
@@ -257,20 +268,22 @@ class Controler(MazeVisualizer):
                 self.view_port -= 100
                 base_assets(self)
                 self.generate_floor()
-                for snap in self.snapshot:
-                    self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, snap[0].id, snap[1], snap[2] - self.view_port)
-                # snap = image_to_memory(self.snapshot, self)
-                # self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, snap.id, 0, 0 - self.view_port)
+                # for snap in self.snapshot:
+                #     self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, snap[0].id, snap[1], snap[2] - self.view_port)
+                # self.snap = image_to_memory(self.snapshot, self)
+                self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.snap.id, 0, 0 - self.view_port)
+                # self.mlx_destroy_image(self.mlx_ptr, snap.id)
                 # self.mlx_sync(self.mlx_ptr, self.SYNC_IMAGE_WRITABLE, snap.id)
         if mouse_num == 5:
             if self.view_port < self.height:
                 self.view_port += 100
                 base_assets(self)
                 self.generate_floor()
-                for snap in self.snapshot:
-                    self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, snap[0].id, snap[1], snap[2] - self.view_port)
+                # for snap in self.snapshot:
+                #     self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, snap[0].id, snap[1], snap[2] - self.view_port)
                 # snap = image_to_memory(self.snapshot, self)
-                # self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, snap.id, 0, 0 - self.view_port)
+                self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.snap.id, 0, 0 - self.view_port)
+                # self.mlx_destroy_image(self.mlx_ptr, snap.id)
                 # self.mlx_sync(self.mlx_ptr, self.SYNC_IMAGE_WRITABLE, snap.id)
 
     @staticmethod
@@ -278,7 +291,8 @@ class Controler(MazeVisualizer):
         if self.running_state is False:
             return
         try:
-            sleep(self.speed)
+            # for _ in range(10):
+            # sleep(self.speed)
             next(self.wall_builder)
         except StopIteration:
             pass
@@ -292,26 +306,24 @@ def base_assets(m: MazeVisualizer):
         for w in range(0, m.width, p_width):
             for h in range(0, m.height, p_height):
                 background.paste(patchwork, (w, h))
-        m.background = image_to_memory(background, m)
+        m.background = create_mlx_image(m.width, m.height, m)
+        image_to_memory(background, m.background)
         m.logo = ImgData.image_constitution(f"themes/{m.theme}/logo.png", m)
     m.mlx_put_image_to_window(m.mlx_ptr, m.win_ptr, m.background.id, 0, 0)
     m.mlx_put_image_to_window(m.mlx_ptr, m.win_ptr, m.logo.id, int((m.width / 2) - (m.logo.width / 2)), 100 - m.view_port)
-    m.mlx_sync(m.mlx_ptr, m.SYNC_IMAGE_WRITABLE, m.background.id)
-    m.mlx_sync(m.mlx_ptr, m.SYNC_IMAGE_WRITABLE, m.logo.id)
 
 
 def controler(m: Mlx):
-    for _ in range(10):
-        m.mlx_hook(m.win_ptr, 33, 0, m.close, m)
-        m.mlx_key_hook(m.win_ptr, m.keyboard_commands, m)
-        m.mlx_mouse_hook(m.win_ptr, m.mouse_commands, m)
-        m.mlx_loop_hook(m.mlx_ptr, m.dig, m)
+    m.mlx_hook(m.win_ptr, 33, 0, m.close, m)
+    m.mlx_key_hook(m.win_ptr, m.keyboard_commands, m)
+    m.mlx_mouse_hook(m.win_ptr, m.mouse_commands, m)
+    m.mlx_loop_hook(m.mlx_ptr, m.dig, m)
 
 
 def maze_visualizer() -> None:
     width = 3840
     height = 2160
-    theme = 'pokemon'
+    theme = 'minecraft'
     m = Controler(width, height, theme, generation)
     base_assets(m)
     m.generate_floor()
