@@ -6,7 +6,7 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/03/21 03:32:25 by lbordana        #+#    #+#               #
-#  Updated: 2026/03/26 17:34:28 by lbordana        ###   ########.fr        #
+#  Updated: 2026/03/26 19:40:14 by lbordana        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -19,6 +19,7 @@ from time import sleep, time
 from data_test import generation
 import io
 import tracemalloc
+import ctypes
 
 tracemalloc.start()
 
@@ -67,11 +68,8 @@ def create_mlx_image(width, height, m: Mlx):
 
 def image_to_memory(image_pil, mlx_image: ImgData):
     r, g, b, a = image_pil.split()
-    start = time()
     image_pil = Image.merge("RGBA", (b, g, r, a))
-    mlx_image.data[:] = image_pil.tobytes()
-    end = time()
-    print(end - start)
+    mlx_image.data[:] = image_pil._repr_png_()
     return mlx_image
 
 
@@ -84,6 +82,7 @@ class MazeVisualizer(Mlx):
         self.maze_height = 20
         self.mlx_ptr = self.mlx_init()
         self.width, self.height = self.mlx_get_screen_size(self.mlx_ptr)[1:]
+        print(self.width, self.height)
         self.win_ptr = self.mlx_new_window(self.mlx_ptr, self.width,
                                            self.height,
                                            "A_maze_ing : Game poetry")
@@ -151,9 +150,8 @@ class MazeVisualizer(Mlx):
             if int(binary[-4]) == 0:
                 self.wall_mask.paste(self.path_tile, (0, self.tilesize))
             self.snapshot.paste(self.wall_mask, (pos[0], pos[1]))
-            image_to_memory(self.snapshot, self.snap)
-            self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.snap.id, 0, 0 - self.view_port)
-            # self.mlx_sync(self.mlx_ptr, self.SYNC_IMAGE_WRITABLE, self.snap.id)
+            image_to_memory(self.wall_mask, self.tile)
+            self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.tile.id, pos[0], pos[1] - self.view_port)
             yield None
 
     def generate_ways(self, data=None):
@@ -271,6 +269,7 @@ class Controler(MazeVisualizer):
                 # for snap in self.snapshot:
                 #     self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, snap[0].id, snap[1], snap[2] - self.view_port)
                 # self.snap = image_to_memory(self.snapshot, self)
+                image_to_memory(self.snapshot, self.snap)
                 self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.snap.id, 0, 0 - self.view_port)
                 # self.mlx_destroy_image(self.mlx_ptr, snap.id)
                 # self.mlx_sync(self.mlx_ptr, self.SYNC_IMAGE_WRITABLE, snap.id)
@@ -282,6 +281,7 @@ class Controler(MazeVisualizer):
                 # for snap in self.snapshot:
                 #     self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, snap[0].id, snap[1], snap[2] - self.view_port)
                 # snap = image_to_memory(self.snapshot, self)
+                image_to_memory(self.snapshot, self.snap)
                 self.mlx_put_image_to_window(self.mlx_ptr, self.win_ptr, self.snap.id, 0, 0 - self.view_port)
                 # self.mlx_destroy_image(self.mlx_ptr, snap.id)
                 # self.mlx_sync(self.mlx_ptr, self.SYNC_IMAGE_WRITABLE, snap.id)
@@ -292,7 +292,7 @@ class Controler(MazeVisualizer):
             return
         try:
             # for _ in range(10):
-            # sleep(self.speed)
+            sleep(self.speed)
             next(self.wall_builder)
         except StopIteration:
             pass
