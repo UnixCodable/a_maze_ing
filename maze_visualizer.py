@@ -6,7 +6,7 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/03/21 03:32:25 by lbordana        #+#    #+#               #
-#  Updated: 2026/03/27 17:05:17 by lbordana        ###   ########.fr        #
+#  Updated: 2026/03/27 20:36:33 by lbordana        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -34,45 +34,45 @@ def parsed_data():
     return parsed
 
 
-class ImgData():
-    def __init__(self, id=None, width=None, height=None, data=None, bpp=None, sl=None, iformat=None):
-        self.id = id
-        self.width = width
-        self.height = height
-        self.data = data
-        self.bpp = bpp
-        self.sl = sl
-        self.iformat = iformat
+# class ImgData():
+#     def __init__(self, id=None, width=None, height=None, data=None, bpp=None, sl=None, iformat=None):
+#         self.id = id
+#         self.width = width
+#         self.height = height
+#         self.data = data
+#         self.bpp = bpp
+#         self.sl = sl
+#         self.iformat = iformat
 
-    @staticmethod
-    def image_constitution(path, m: Mlx):
-        img_convert = m.mlx_png_file_to_image(m.mlx_ptr, path)
-        img_id, img_width, img_height = img_convert
-        img_data, img_bpp, img_sl, img_iformat = m.mlx_get_data_addr(img_id)
-        image = ImgData(img_id,
-                        img_width,
-                        img_height,
-                        img_data,
-                        img_bpp,
-                        img_sl,
-                        img_iformat)
-        return image
-
-
-def create_mlx_image(width, height, m: Mlx):
-    mlx_image = ImgData()
-    mlx_image.id = m.mlx_new_image(m.mlx_ptr, width, height)
-    mlx_image.width, mlx_image.height = (width, height)
-    mlx_image.data, mlx_image.bpp, mlx_image.sl, mlx_image.iformat = m.mlx_get_data_addr(mlx_image.id)
-    return mlx_image
+#     @staticmethod
+#     def image_constitution(path, m: Mlx):
+#         img_convert = m.mlx_png_file_to_image(m.mlx_ptr, path)
+#         img_id, img_width, img_height = img_convert
+#         img_data, img_bpp, img_sl, img_iformat = m.mlx_get_data_addr(img_id)
+#         image = ImgData(img_id,
+#                         img_width,
+#                         img_height,
+#                         img_data,
+#                         img_bpp,
+#                         img_sl,
+#                         img_iformat)
+#         return image
 
 
-def image_to_memory(array, mlx_image: ImgData):
-    buffer = np.frombuffer(mlx_image.data, dtype=np.uint8).reshape(array.shape)
-    buffer[:, :, 0] = array[:, :, 2]
-    buffer[:, :, 1] = array[:, :, 1]
-    buffer[:, :, 2] = array[:, :, 0]
-    buffer[:, :, 3] = array[:, :, 3]
+# def create_mlx_image(width, height, m: Mlx):
+#     mlx_image = ImgData()
+#     mlx_image.id = m.mlx_new_image(m.mlx_ptr, width, height)
+#     mlx_image.width, mlx_image.height = (width, height)
+#     mlx_image.data, mlx_image.bpp, mlx_image.sl, mlx_image.iformat = m.mlx_get_data_addr(mlx_image.id)
+#     return mlx_image
+
+
+# def image_to_memory(array, mlx_image: ImgData):
+#     buffer = np.frombuffer(mlx_image.data, dtype=np.uint8).reshape(array.shape)
+#     buffer[:, :, 0] = array[:, :, 2]
+#     buffer[:, :, 1] = array[:, :, 1]
+#     buffer[:, :, 2] = array[:, :, 0]
+#     buffer[:, :, 3] = array[:, :, 3]
 
 
 class MazeVisualizer(Mlx):
