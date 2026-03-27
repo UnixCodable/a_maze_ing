@@ -6,7 +6,7 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/03/21 03:32:25 by lbordana        #+#    #+#               #
-#  Updated: 2026/03/27 14:32:07 by lbordana        ###   ########.fr        #
+#  Updated: 2026/03/27 17:05:17 by lbordana        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -301,8 +301,8 @@ class Controler(MazeVisualizer):
         if mouse_num == 4:
             if self.view_port > 0:
                 # image_to_memory(self.snapshot, self.snap)
-                for _ in range(5):
-                    self.view_port -= 20
+                for _ in range(3):
+                    self.view_port -= 30
                     base_assets(self)
                     self.generate_floor()
                     self.mlx_put_image_to_window(self.mlx_ptr,
@@ -314,8 +314,8 @@ class Controler(MazeVisualizer):
         if mouse_num == 5:
             if self.view_port < self.height:
                 # image_to_memory(self.snapshot, self.snap)
-                for _ in range(5):
-                    self.view_port += 20
+                for _ in range(3):
+                    self.view_port += 30
                     base_assets(self)
                     self.generate_floor()
                     self.mlx_put_image_to_window(self.mlx_ptr,
@@ -330,7 +330,7 @@ class Controler(MazeVisualizer):
         if self.running_state is False:
             return
         try:
-            sleep(self.speed)
+            # sleep(self.speed)
             next(self.wall_builder)
         except StopIteration:
             pass
@@ -363,11 +363,7 @@ def base_assets(m: MazeVisualizer):
 
 
 def controler(m: Mlx):
-    m.mlx_hook(m.win_ptr, 33, 0, m.close, m)
-    m.mlx_key_hook(m.win_ptr, m.keyboard_commands, m)
-    m.mlx_mouse_hook(m.win_ptr, m.mouse_commands, m)
-    m.mlx_loop_hook(m.mlx_ptr, m.dig, m)
-    m.mlx_sync(m.mlx_ptr, m.SYNC_WIN_COMPLETED, m.win_ptr)
+    pass
 
 
 def maze_visualizer() -> None:
@@ -375,7 +371,11 @@ def maze_visualizer() -> None:
     m = Controler(theme, generation)
     base_assets(m)
     m.generate_floor()
-    m.mlx_loop_hook(m.mlx_ptr, controler, m)
+    # m.mlx_loop_hook(m.mlx_ptr, controler, m)
+    m.mlx_hook(m.win_ptr, 33, 0, m.close, m)
+    m.mlx_key_hook(m.win_ptr, m.keyboard_commands, m)
+    m.mlx_mouse_hook(m.win_ptr, m.mouse_commands, m)
+    m.mlx_loop_hook(m.mlx_ptr, m.dig, m)
     m.mlx_loop(m.mlx_ptr)
     snapshot = tracemalloc.take_snapshot()
     top_stats = snapshot.statistics('lineno')
