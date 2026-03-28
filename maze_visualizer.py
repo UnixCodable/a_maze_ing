@@ -6,7 +6,7 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/03/21 03:32:25 by lbordana        #+#    #+#               #
-#  Updated: 2026/03/27 20:36:33 by lbordana        ###   ########.fr        #
+#  Updated: 2026/03/28 13:15:45 by lbordana        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -34,45 +34,45 @@ def parsed_data():
     return parsed
 
 
-# class ImgData():
-#     def __init__(self, id=None, width=None, height=None, data=None, bpp=None, sl=None, iformat=None):
-#         self.id = id
-#         self.width = width
-#         self.height = height
-#         self.data = data
-#         self.bpp = bpp
-#         self.sl = sl
-#         self.iformat = iformat
+class ImgData():
+    def __init__(self, id=None, width=None, height=None, data=None, bpp=None, sl=None, iformat=None):
+        self.id = id
+        self.width = width
+        self.height = height
+        self.data = data
+        self.bpp = bpp
+        self.sl = sl
+        self.iformat = iformat
 
-#     @staticmethod
-#     def image_constitution(path, m: Mlx):
-#         img_convert = m.mlx_png_file_to_image(m.mlx_ptr, path)
-#         img_id, img_width, img_height = img_convert
-#         img_data, img_bpp, img_sl, img_iformat = m.mlx_get_data_addr(img_id)
-#         image = ImgData(img_id,
-#                         img_width,
-#                         img_height,
-#                         img_data,
-#                         img_bpp,
-#                         img_sl,
-#                         img_iformat)
-#         return image
-
-
-# def create_mlx_image(width, height, m: Mlx):
-#     mlx_image = ImgData()
-#     mlx_image.id = m.mlx_new_image(m.mlx_ptr, width, height)
-#     mlx_image.width, mlx_image.height = (width, height)
-#     mlx_image.data, mlx_image.bpp, mlx_image.sl, mlx_image.iformat = m.mlx_get_data_addr(mlx_image.id)
-#     return mlx_image
+    @staticmethod
+    def image_constitution(path, m: Mlx):
+        img_convert = m.mlx_png_file_to_image(m.mlx_ptr, path)
+        img_id, img_width, img_height = img_convert
+        img_data, img_bpp, img_sl, img_iformat = m.mlx_get_data_addr(img_id)
+        image = ImgData(img_id,
+                        img_width,
+                        img_height,
+                        img_data,
+                        img_bpp,
+                        img_sl,
+                        img_iformat)
+        return image
 
 
-# def image_to_memory(array, mlx_image: ImgData):
-#     buffer = np.frombuffer(mlx_image.data, dtype=np.uint8).reshape(array.shape)
-#     buffer[:, :, 0] = array[:, :, 2]
-#     buffer[:, :, 1] = array[:, :, 1]
-#     buffer[:, :, 2] = array[:, :, 0]
-#     buffer[:, :, 3] = array[:, :, 3]
+def create_mlx_image(width, height, m: Mlx):
+    mlx_image = ImgData()
+    mlx_image.id = m.mlx_new_image(m.mlx_ptr, width, height)
+    mlx_image.width, mlx_image.height = (width, height)
+    mlx_image.data, mlx_image.bpp, mlx_image.sl, mlx_image.iformat = m.mlx_get_data_addr(mlx_image.id)
+    return mlx_image
+
+
+def image_to_memory(array, mlx_image: ImgData):
+    buffer = np.frombuffer(mlx_image.data, dtype=np.uint8).reshape(array.shape)
+    buffer[:, :, 0] = array[:, :, 2]
+    buffer[:, :, 1] = array[:, :, 1]
+    buffer[:, :, 2] = array[:, :, 0]
+    buffer[:, :, 3] = array[:, :, 3]
 
 
 class MazeVisualizer(Mlx):
@@ -92,14 +92,16 @@ class MazeVisualizer(Mlx):
         self.background = None
         self.floor = None
         self.tile = create_mlx_image(self.tilesize * 3, self.tilesize * 3, self)
-        self.wall_tile = Image.open(f"themes/{self.theme}/wall_patch.png").convert('RGBA')
-        self.path_tile = Image.open(f"themes/{self.theme}/path_patch.png").convert('RGBA')
+        self.wall_tile = Image.open(f"themes/{self.theme}/wall_texture.png").convert('RGBA')
+        self.path_tile = Image.open(f"themes/{self.theme}/path_texture.png").convert('RGBA')
         self.path_wall_patch = Image.alpha_composite(self.path_tile, self.wall_tile)
         self.wall_mask = np.zeros((self.tilesize * 3, self.tilesize * 3, 4), dtype=np.uint8)
         self.snapshot = np.zeros((self.height*4, self.width, 4), dtype=np.uint8)
         self.snap = create_mlx_image(self.width, self.height * 4, self)
         self.snap_buf = np.frombuffer(self.snap.data, dtype=np.uint8).reshape(self.snapshot.shape)
         self.grid = []
+        self.start = None
+        self.end = 0
         self.mlx_sync(self.mlx_ptr, self.SYNC_WIN_COMPLETED, self.win_ptr)
 
     def generate_floor(self):
@@ -121,6 +123,7 @@ class MazeVisualizer(Mlx):
                                      start_pos[1] - self.view_port)
 
     def generate_walls(self, data=None):
+        self.start = time()
         start_pos = (int((self.width / 2) - ((self.maze_width / 2) * self.tilesize * 2)),
                      int(500))
         appending = True
@@ -167,25 +170,26 @@ class MazeVisualizer(Mlx):
                                          self.tile.id,
                                          pos[0],
                                          pos[1] - self.view_port)
-            yield None
+            self.end += time()
+            yield self.end - self.start
 
-    def generate_ways(self, data=None):
-        start = (int((self.width / 2) - ((self.maze_width / 2) * self.tilesize * 2)),
-                 int(500))
-        entrance_way = [start[0] + d * (self.tilesize * 2) for d in data[0]]
-        exit_way = [start[0] + d * (self.tilesize * 2) for d in data[1]]
-        entrance = ImgData.image_constitution(f"themes/{self.theme}/entrance.png", self)
-        self.mlx_put_image_to_window(self.mlx_ptr,
-                                     self.win_ptr,
-                                     entrance.id,
-                                     entrance_way[0],
-                                     entrance_way[1])
-        exiting = ImgData.image_constitution(f"themes/{self.theme}/exit.png", self)
-        self.mlx_put_image_to_window(self.mlx_ptr,
-                                     self.win_ptr,
-                                     exiting.id,
-                                     exit_way[0],
-                                     exit_way[1])
+    # def generate_ways(self, data=None):
+    #     start = (int((self.width / 2) - ((self.maze_width / 2) * self.tilesize * 2)),
+    #              int(500))
+    #     entrance_way = [start[0] + d * (self.tilesize * 2) for d in data[0]]
+    #     exit_way = [start[0] + d * (self.tilesize * 2) for d in data[1]]
+    #     entrance = ImgData.image_constitution(f"themes/{self.theme}/entrance.png", self)
+    #     self.mlx_put_image_to_window(self.mlx_ptr,
+    #                                  self.win_ptr,
+    #                                  entrance.id,
+    #                                  entrance_way[0],
+    #                                  entrance_way[1])
+    #     exiting = ImgData.image_constitution(f"themes/{self.theme}/exit.png", self)
+    #     self.mlx_put_image_to_window(self.mlx_ptr,
+    #                                  self.win_ptr,
+    #                                  exiting.id,
+    #                                  exit_way[0],
+    #                                  exit_way[1])
 
 
 class Controler(MazeVisualizer):
@@ -204,7 +208,7 @@ class Controler(MazeVisualizer):
 
     @staticmethod
     def erase_text(m):
-        patchwork = Image.open(f"themes/{m.theme}/background_patch.png")
+        patchwork = Image.open(f"themes/{m.theme}/background_texture.png")
         p_width, p_height = patchwork.size
         background = Image.new('RGBA', (900, 400))
         for w in range(0, 900, p_width):
@@ -280,8 +284,8 @@ class Controler(MazeVisualizer):
                 self.theme = theme[theme.index(self.theme) + 1]
             except IndexError:
                 self.theme = theme[0]
-            self.wall_tile = Image.open(f"themes/{self.theme}/wall_patch.png").convert('RGBA')
-            self.path_tile = Image.open(f"themes/{self.theme}/path_patch.png").convert('RGBA')
+            self.wall_tile = Image.open(f"themes/{self.theme}/wall_texture.png").convert('RGBA')
+            self.path_tile = Image.open(f"themes/{self.theme}/path_texture.png").convert('RGBA')
             self.mlx_destroy_image(self.mlx_ptr, self.background.id)
             self.mlx_destroy_image(self.mlx_ptr, self.logo.id)
             self.mlx_destroy_image(self.mlx_ptr, self.floor.id)
@@ -330,15 +334,17 @@ class Controler(MazeVisualizer):
         if self.running_state is False:
             return
         try:
-            # sleep(self.speed)
+            start = time()
             next(self.wall_builder)
+            end = time()
+            print(end - start)
         except StopIteration:
             pass
 
 
 def base_assets(m: MazeVisualizer):
     if m.background is None and m.logo is None:
-        patchwork = Image.open(f"themes/{m.theme}/background_patch.png").convert('RGBA')
+        patchwork = Image.open(f"themes/{m.theme}/background_texture.png").convert('RGBA')
         m.background = create_mlx_image(m.width, m.height, m)
         p_array = np.array(patchwork)
         p_width, p_height = patchwork.size
