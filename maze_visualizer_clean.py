@@ -6,17 +6,15 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/03/27 17:04:43 by lbordana        #+#    #+#               #
-#  Updated: 2026/03/28 18:34:08 by lbordana        ###   ########.fr        #
+#  Updated: 2026/03/29 03:42:05 by lbordana        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
 from mlx import Mlx
 from PIL import Image, ImageDraw, ImageFont
-from 
 import numpy as np
 import cv2
 from time import sleep, time
-from data_test import generation
 from typing import Generator
 from config_parser import read_config
 
@@ -39,7 +37,7 @@ class MazeInterface(Mlx):
         self.mlx = self.mlx_init()
         self.maze_width = config.get('width')
         self.maze_height = config.get('height')
-        self.tile_size = tile_size
+        self.tile_size = int(32 * self.scale_tile_size())
         self.base_width = (self.maze_width * 2 + 1) * self.tile_size
         self.base_height = (self.maze_height * 2 + 1) * self.tile_size
         self.win_width = (self.maze_width * 2 + 1) * self.tile_size + 400
@@ -70,7 +68,6 @@ class MazeInterface(Mlx):
             for h in range(0, 400, p_height):
                 h_size = 400 - h if h + p_height > 400 else p_height
                 w_size = 550 - w if w + p_width > 550 else p_width
-                print(h_size, w_size)
                 background[h:h + h_size, w:w + w_size, 0:3] =\
                     self.background_texture[0:h_size, 0:w_size, 0:3]
                 background[:, :, 3] = 255
@@ -94,55 +91,50 @@ class MazeInterface(Mlx):
             self.mlx_get_data_addr(mlx_image.id)
         return mlx_image
 
+    def scale_tile_size(self) -> int:
+        scale = 1
+        if self.maze_height < 12 or self.maze_width < 20:
+            scale = 1.4
+        if self.maze_height > 30 or self.maze_width > 50:
+            scale = 0.7
+        if self.maze_height > 60 or self.maze_width > 100:
+            scale = 0.4
+        if self.maze_height > 150 or self.maze_width > 200:
+            scale = 0.2
+        # if self.maze_height > 200 or self.maze_width > 200:
+        #     scale = 0.1
+        return scale
+
 
 class MazeFront(MazeInterface):
     def __init__(self, config: dict, tile_size: int,
-                 theme: str = 'classic') -> None:
-
-        #  Maze Data
-
-        super().__init__(config, tile_size)
+                 theme: str = 'classic', interface: bool = True) -> None:
+        if interface is True:
+            super().__init__(config, tile_size)
         self.historic = []
         self.theme = f"themes/{theme}"
-
-        #  Maze Textures
-
-        self.background_texture = \
-            np.asarray(cv2.imread(f"{self.theme}/background_texture.png",
-                                  flags=cv2.IMREAD_UNCHANGED), dtype=np.uint8)
-        print(self.background_texture.shape)
-        self.wall_texture = \
-            np.asarray(cv2.imread(f"{self.theme}/wall_texture.png",
-                                  flags=cv2.IMREAD_UNCHANGED), dtype=np.uint8)
-        self.path_texture = \
-            np.asarray(cv2.imread(f"{self.theme}/path_texture.png",
-                                  flags=cv2.IMREAD_UNCHANGED), dtype=np.uint8)
-        self.logo_texture = \
-            np.asarray(cv2.imread(f"{self.theme}/logo.png",
-                                  flags=cv2.IMREAD_UNCHANGED), dtype=np.uint8)
+        self.background_texture = self.gen_array('background_texture.png')
+        self.wall_texture = self.gen_array('wall_texture.png', True)
+        self.path_texture = self.gen_array('path_texture.png', True)
+        self.logo_texture = self.gen_array('logo.png')
         self.wall_path = \
             np.where(self.wall_texture == 0, self.path_texture,
                      self.wall_texture)
         self.tile = self.create_mlx_image(self.tile_size * 3,
                                           self.tile_size * 3)
         self.mask = None
-        self.floor = \
-            self.create_mlx_image((self.maze_width * 2 + 1) * self.tile_size,
-                                  (self.maze_height * 2 + 1) * self.tile_size)
-        self.background = \
-            self.create_mlx_image(self.win_width, self.win_height)
-        self.snapshot = \
-            np.zeros(((self.maze_height * 2 + 1) * self.tile_size,
-                      (self.maze_width * 2 + 1) * self.tile_size, 4),
-                     dtype=np.uint8)
+        self.floor = self.create_mlx_image(self.base_width, self.base_height)
+        self.background = self.create_mlx_image(self.win_width,
+                                                self.win_height)
+        self.snapshot = np.zeros((self.base_height, self.base_width, 4),
+                                 dtype=np.uint8)
         self.logo = self.create_mlx_image(self.logo_texture.shape[1],
                                           self.logo_texture.shape[0])
-        self.snap = \
-            self.create_mlx_image((self.maze_width * 2 + 1) * self.tile_size,
-                                  (self.maze_height * 2 + 1) * self.tile_size)
+        self.snap = self.create_mlx_image(self.base_width, self.base_height)
         self.snap_buf = (np.frombuffer(self.snap.data, dtype=np.uint8).
                          reshape(self.snapshot.shape))
         self.last_bin = '1111'
+        self.generator = None
 
     def mask_creator(self) -> None:
         tile = self.tile_size
@@ -168,8 +160,6 @@ class MazeFront(MazeInterface):
             self.mask_creator()
         for d in data:
             binary = bin(int(d[2], 16))[2:].zfill(4)
-            # pos = (self.pos_x + d[0] * (tile * 2),
-            #        self.pos_y + d[1] * (tile * 2))
             p_snap = (d[0] * (tile * 2),
                       d[1] * (tile * 2))
             mask = self.mask.copy()
@@ -201,6 +191,7 @@ class MazeFront(MazeInterface):
                 background[:, :, 3] = 255
         self.image_to_memory(background, self.background)
         self.put_to_screen(self.background.id, 0, 0)
+        self.mlx_sync(self.mlx, self.SYNC_WIN_COMPLETED, self.win)
 
     def generate_logo(self) -> None:
         width = self.logo_texture.shape[1]
@@ -209,11 +200,24 @@ class MazeFront(MazeInterface):
                            int((self.win_width / 2) - (width / 2)),
                            100 - self.cam)
 
+    def gen_array(self, filename: str, resizing: bool = False):
+        image = cv2.imread(f"{self.theme}/{filename}",
+                           flags=cv2.IMREAD_UNCHANGED)
+        try:
+            image_argb = cv2.cvtColor(image, code=cv2.COLOR_GRAY2BGRA)
+        except cv2.error:
+            image_argb = cv2.cvtColor(image, code=cv2.COLOR_BGR2BGRA)
+        if resizing is True:
+            image_scale = cv2.resize(image_argb, (self.tile_size,
+                                                  self.tile_size))
+            return np.asarray(image_scale, dtype=np.uint8)
+        return np.asarray(image_argb, dtype=np.uint8)
+
 
 class Controler(MazeFront):
     def __init__(self, config: dict, tile_size: int,
-                 theme: str = 'classic') -> None:
-        super().__init__(config, tile_size, theme)
+                 theme: str = 'classic', interface: bool = True) -> None:
+        super().__init__(config, tile_size, theme, interface)
 
     def close_window(self) -> None:
         self.mlx_loop_exit(self.mlx)
@@ -232,13 +236,35 @@ class Controler(MazeFront):
             self.erase_text()
             self.running_state = True
             return
+        if key_num == 116:
+            theme = ['classic',
+                     'classic_red',
+                     'pokemon',
+                     'fallout',
+                     'minecraft']
+            active = self.theme.split('/')[1]
+            self.mlx_destroy_image(self.mlx, self.tile.id)
+            self.mlx_destroy_image(self.mlx, self.logo.id)
+            self.mlx_destroy_image(self.mlx, self.snap.id)
+            self.mlx_destroy_image(self.mlx, self.floor.id)
+            self.mlx_clear_window(self.mlx, self.win)
+            self.mlx_sync(self.mlx, self.SYNC_WIN_COMPLETED, self.win)
+            try:
+                self.__init__(None, 32, theme[theme.index(active) + 1], False)
+            except IndexError:
+                self.__init__(None, 32, theme[0], False)
+            self.generator = self.generate_walls(parsed_data())
+            self.mask_creator()
+            self.generate_background()
+            self.generate_logo()
+            self.generate_floor()
 
     def mouse_commands(self, mouse_num, x, y, *a):
         logo_width = self.logo_texture.shape[1]
         if mouse_num == 4:
             if self.cam > 0:
-                for _ in range(40):
-                    self.cam -= 3
+                for _ in range(20):
+                    self.cam -= 6
                     self.put_to_screen(self.background.id, 0, 0)
                     self.put_to_screen(
                         self.logo.id,
@@ -251,8 +277,8 @@ class Controler(MazeFront):
                                        self.pos_y - self.cam)
         if mouse_num == 5:
             if self.cam < self.win_height:
-                for _ in range(40):
-                    self.cam += 3
+                for _ in range(20):
+                    self.cam += 6
                     self.put_to_screen(self.background.id, 0, 0)
                     self.put_to_screen(
                         self.logo.id,
@@ -264,31 +290,46 @@ class Controler(MazeFront):
                     self.put_to_screen(self.snap.id, self.pos_x,
                                        self.pos_y - self.cam)
 
-    def generate(self, generator: Generator):
+    def generate(self, *a):
         if self.running_state is False:
             return
         try:
             # sleep(self.speed)
-            for _ in range(5):
+            for _ in range(1):
                 start = time()
-                next(generator)
+                next(self.generator)
                 end = time()
                 print(end - start)
         except StopIteration:
             pass
 
 
+def parsed_data():
+    parsed = []
+    with open("maze.txt", 'r') as file:
+        data = file.readlines()
+        nb = 0
+        to_parse = []
+        while data[nb] != '\n':
+            to_parse.append(data[nb])
+            nb += 1
+        for nb_d, d in enumerate(to_parse):
+            for nb_char, char in enumerate(d[:-1]):
+                parsed.append([nb_char, nb_d, d[nb_char]])
+    return parsed
+
+
 def render():
     config = read_config("config.txt")
-    m = Controler(config, 32, 'pokemon')
-    generator = m.generate_walls(generation)
+    m = Controler(config, 32)
+    m.generator = m.generate_walls(parsed_data())
     m.mlx_hook(m.win, 33, 0, Controler.close_window, m)
     m.generate_background()
     m.generate_logo()
     m.generate_floor()
     m.mlx_key_hook(m.win, m.key_commands, m)
     m.mlx_mouse_hook(m.win, m.mouse_commands, m)
-    m.mlx_loop_hook(m.mlx, m.generate, generator)
+    m.mlx_loop_hook(m.mlx, m.generate, None)
     m.mlx_loop(m.mlx)
 
 

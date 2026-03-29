@@ -3,8 +3,8 @@ from typing import Tuple, Optional
 
 
 class MazeConfig(BaseModel):
-    width: int = Field(ge=10, le=30)
-    height: int = Field(ge=10, le=30)
+    width: int = Field(ge=2, le=1000)
+    height: int = Field(ge=2, le=1000)
     entry: Tuple[int, int]
     exit: Tuple[int, int]
     output_file: str

@@ -6,7 +6,7 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/03/21 03:32:25 by lbordana        #+#    #+#               #
-#  Updated: 2026/03/28 13:15:45 by lbordana        ###   ########.fr        #
+#  Updated: 2026/03/29 01:02:57 by lbordana        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -26,8 +26,13 @@ tracemalloc.start()
 def parsed_data():
     parsed = []
     with open("maze.txt", 'r') as file:
-        data = file.readlines()[:20]
-        for nb_d, d in enumerate(data):
+        data = file.readlines()
+        nb = 0
+        to_parse = []
+        while data[nb] != '\n':
+            to_parse.append(data[nb])
+            nb += 1
+        for nb_d, d in enumerate(to_parse):
             for nb_char, char in enumerate(d[:-1]):
                 parsed.append([nb_char, nb_d, d[nb_char]])
     print(parsed)
@@ -377,7 +382,7 @@ def maze_visualizer() -> None:
     m = Controler(theme, generation)
     base_assets(m)
     m.generate_floor()
-    # m.mlx_loop_hook(m.mlx_ptr, controler, m)
+    m.mlx_loop_hook(m.mlx_ptr, controler, m)
     m.mlx_hook(m.win_ptr, 33, 0, m.close, m)
     m.mlx_key_hook(m.win_ptr, m.keyboard_commands, m)
     m.mlx_mouse_hook(m.win_ptr, m.mouse_commands, m)
