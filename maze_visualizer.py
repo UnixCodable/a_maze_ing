@@ -5,23 +5,395 @@
 #                                                  +:+ +:+         +:+      #
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
-#  Created: 2026/03/21 03:32:25 by lbordana        #+#    #+#               #
-#  Updated: 2026/03/29 01:02:57 by lbordana        ###   ########.fr        #
+#  Created: 2026/03/27 17:04:43 by lbordana        #+#    #+#               #
+#  Updated: 2026/03/30 03:59:32 by lbordana        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
-from encodings.hex_codec import hex_encode
-
 from mlx import Mlx
 from PIL import Image, ImageDraw, ImageFont
+from PIL.Image import Image as PillowImage
+from typing import Any
 import numpy as np
+import cv2
 from time import sleep, time
-from data_test import generation
-import io
-import tracemalloc
-import ctypes
+from typing import Generator
+from config_parser import read_config
 
-tracemalloc.start()
+
+class ImgData():
+    """
+    Gathering mlx images data adresses:
+        - ID : Image identifier (C Pointer)
+        - Width : Width declared during image creation
+        - Height : Height declared during image creation
+        - Data : Image data bytes, BGRA colors channel
+        - BPP : Bits per pixel needed to represent a pixel colour
+        - SL : Used to get / modified number of bytes used to store one line
+        - Iformat : Define format used as color channel - BGRA / ARGB
+    """
+    def __init__(self) -> None:
+        """Initialization of an image, all components adresses per item"""
+        self.id = None
+        self.width = None
+        self.height = None
+        self.data = None
+        self.bpp = None
+        self.sl = None
+        self.iformat = None
+
+
+class MazeInterface(Mlx):
+    """Maze base components
+
+    Args:
+        Mlx : Mlx is a C wrapper of the MiniLibX project, an X-Window
+              programming API.
+    """
+    def __init__(self, config: dict) -> None:
+        """Initialization of mlx and maze basics data.
+
+        Args:
+            config (dict): Configuration of the maze (Dimensions)
+        """
+        super().__init__()
+        self.mlx = self.mlx_init()
+        self.maze_width: int = int(config.get('width', 0))
+        self.maze_height: int = int(config.get('height', 0))
+        self.tile_size = int(32 * self.scale_tile_size())
+        self.base_width = (self.maze_width * 2 + 1) * self.tile_size
+        self.base_height = (self.maze_height * 2 + 1) * self.tile_size
+        self.win_width: int = (self.maze_width * 2 + 1) * self.tile_size + 400
+        self.win_height: int = (self.maze_height * 2 + 1) * self.tile_size + 700
+        self.win = self.mlx_new_window(
+                self.mlx,
+                self.win_width,
+                self.win_height,
+                "A_Maze_Ing : An old gaming story"
+        )
+        self.pos_x = int((self.win_width / 2) - self.base_width / 2)
+        self.pos_y = 500
+        self.running_state = True
+        self.cam = 0
+
+    def put_to_screen(self, img_id: Any, pos_x: int, pos_y: int) -> None:
+        """Method that use the mlx_put_image_to_window method
+
+        Args:
+            img_id (any): The identifier of the Image
+            pos_x (int): The x position to place the image
+            pos_y (int): The y position to place the image
+        """
+        self.mlx_put_image_to_window(self.mlx, self.win, img_id, pos_x, pos_y)
+
+    def image_to_memory(self, array: np.uint8, image: ImgData) -> None:
+        """Take a 3 dimensional array of a converted image and place those
+        data in the data address of a ImgData object.
+
+        Args:
+            array (np.uint8): An image (from cv2 or PIL) converted as array
+            image (ImgData): ImgData object, containing all image pointers
+        """
+        buffer = np.frombuffer(image.data, dtype=np.uint8).reshape(array.shape)
+        buffer[:, :, :] = array[:, :, :]
+
+    def create_mlx_image(self, width: int, height: int) -> ImgData:
+        """Create a new ImgData object and returns it.
+
+        Args:
+            width (int): The width of the image, to declare
+            height (int): The height of the image, to declare
+
+        Returns:
+            ImgData: An ImgData object (mlx compatible image)
+        """
+        mlx_image = ImgData()
+        mlx_image.id = self.mlx_new_image(self.mlx, width, height)
+        mlx_image.width, mlx_image.height = (width, height)
+        mlx_image.data, mlx_image.bpp, mlx_image.sl, mlx_image.iformat = \
+            self.mlx_get_data_addr(mlx_image.id)
+        return mlx_image
+
+    def scale_tile_size(self) -> int:
+        """Define the size of the tile, based on the size of the maze
+
+        Returns:
+            int: Returns the multiplier scale of a tile
+        """
+        scale = 1
+        if self.maze_height < 12 or self.maze_width < 20:
+            scale = 1.4
+        if self.maze_height > 30 or self.maze_width > 50:
+            scale = 0.7
+        if self.maze_height > 60 or self.maze_width > 100:
+            scale = 0.4
+        if self.maze_height > 150 or self.maze_width > 200:
+            scale = 0.2
+        # if self.maze_height > 200 or self.maze_width > 200:
+        #     scale = 0.1
+        return scale
+
+
+class MazeFront(MazeInterface):
+    def __init__(self, config: dict, theme: str = 'classic',
+                 interface: bool = True) -> None:
+        if interface is True:
+            super().__init__(config)
+        self.historic = []
+        self.theme = f"themes/{theme}"
+        self.background_texture = self.gen_array('background_texture.png')
+        self.wall_texture = self.gen_array('wall_texture.png', True)
+        self.path_texture = self.gen_array('path_texture.png', True)
+        self.logo_texture = self.gen_array('logo.png')
+        self.wall_path = \
+            np.where(self.wall_texture == 0, self.path_texture,
+                     self.wall_texture)
+        self.tile = self.create_mlx_image(self.tile_size * 3,
+                                          self.tile_size * 3)
+        self.mask = None
+        self.floor = self.create_mlx_image(self.base_width, self.base_height)
+        self.background = self.create_mlx_image(self.win_width,
+                                                self.win_height)
+        self.snapshot = np.zeros((self.base_height, self.base_width, 4),
+                                 dtype=np.uint8)
+        self.logo = self.create_mlx_image(self.logo_texture.shape[1],
+                                          self.logo_texture.shape[0])
+        self.snap = self.create_mlx_image(self.base_width, self.base_height)
+        self.snap_buf = (np.frombuffer(self.snap.data, dtype=np.uint8).
+                         reshape(self.snapshot.shape))
+        self.snap_buf.fill(0)
+        self.last_bin = '1111'
+        self.generator = None
+        self.speed = 1
+
+    def console_text(self, string: str, font_size: int) -> PillowImage:
+        """Text to image method. Draw with PIL a text as a new image with 4
+           colors channels (RGBA)
+
+        Args:
+            string (str): The string to write
+            font_size (int): The size of the font
+
+        Returns:
+            ImgData: Newly created image of a text
+        """
+        image = Image.new('RGBA', (700, 300), (0, 0, 0, 200))
+        draw = ImageDraw.Draw(image)
+        font = ImageFont.truetype(f'{self.theme}/font.ttf', font_size)
+        draw.text((150, 120), string, font=font)
+        return image
+
+    def erase_text(self) -> None:
+        p_height = self.background_texture.shape[0]
+        p_width = self.background_texture.shape[1]
+        logo_width = self.logo_texture.shape[1]
+        background = np.zeros((400, 900, 4), dtype=np.uint8)
+        for w in range(0, 900, p_width):
+            for h in range(0, 400, p_height):
+                h_size = 400 - h if h + p_height > 400 else p_height
+                w_size = 900 - w if w + p_width > 900 else p_width
+                background[h:h + h_size, w:w + w_size, 0:3] =\
+                    self.background_texture[0:h_size, 0:w_size, 0:3]
+                background[:, :, 3] = 255
+        eraser = self.create_mlx_image(900, 400)
+        self.image_to_memory(background, eraser)
+        self.put_to_screen(eraser.id, 0, 0)
+        self.put_to_screen(self.logo.id,
+                           int((self.win_width / 2) - (logo_width / 2)),
+                           100 - self.cam)
+        self.mlx_destroy_image(self.mlx, eraser.id)
+
+    def mask_creator(self) -> None:
+        tile = self.tile_size
+        self.mask = np.zeros((tile * 3, tile * 3, 4), dtype=np.uint8)
+        self.mask[0:tile, tile:tile*2] = self.wall_texture
+        self.mask[tile:tile*2, tile*2:tile*3] = self.wall_texture
+        self.mask[tile*2:tile*3, tile:tile*2] = self.wall_texture
+        self.mask[tile:tile*2, 0:tile] = self.wall_texture
+        self.mask[tile:tile*2, tile:tile*2] = self.path_texture
+
+    def generate_floor(self) -> None:
+        floor = np.zeros((self.base_height, self.base_width, 4),
+                         dtype=np.uint8)
+        for w in range(0, self.base_width, self.tile_size):
+            for h in range(0, self.base_height, self.tile_size):
+                floor[h:h+self.tile_size, w:w+self.tile_size] = self.wall_path
+        self.image_to_memory(floor, self.floor)
+        self.put_to_screen(self.floor.id, self.pos_x, self.pos_y - self.cam)
+
+    def generate_walls(self, data: list = None) -> Generator:
+
+        tile = self.tile_size
+
+        if self.mask is None:
+            self.mask_creator()
+        for d in data:
+            binary = bin(int(d[2], 16))[2:].zfill(4)
+            p_snap = (d[0] * (tile * 2),
+                      d[1] * (tile * 2))
+            mask = self.mask.copy()
+            if int(binary[-1]) == 0:
+                mask[0:tile, tile:tile*2] = self.path_texture
+            if int(binary[-2]) == 0:
+                mask[tile:tile*2, tile*2:tile*3] = self.path_texture
+            if int(binary[-3]) == 0:
+                mask[tile*2:tile*3, tile:tile*2] = self.path_texture
+            if int(binary[-4]) == 0:
+                mask[tile:tile*2, 0:tile] = self.path_texture
+            self.snap_buf[p_snap[1]:p_snap[1] + (tile * 3),
+                          p_snap[0]:p_snap[0] + (tile * 3)] = mask
+            yield
+
+    def generate_background(self) -> None:
+        p_height, p_width = self.background_texture.shape[:2]
+        background = np.zeros((self.win_height, self.win_width, 4),
+                              dtype=np.uint8)
+        for w in range(0, self.win_width, p_width):
+            for h in range(0, self.win_height, p_height):
+                h_size = self.win_height - h if h + p_height > self.win_height\
+                    else p_height
+                w_size = self.win_width - w if w + p_width > self.win_width\
+                    else p_width
+                background[h:h + h_size, w:w + w_size, 0:3] =\
+                    self.background_texture[0:h_size, 0:w_size, 0:3]
+                background[:, :, 3] = 255
+        self.image_to_memory(background, self.background)
+        self.put_to_screen(self.background.id, 0, 0)
+        self.mlx_sync(self.mlx, self.SYNC_WIN_COMPLETED, self.win)
+
+    def generate_logo(self) -> None:
+        width = self.logo_texture.shape[1]
+        self.image_to_memory(self.logo_texture, self.logo)
+        self.put_to_screen(self.logo.id,
+                           int((self.win_width / 2) - (width / 2)),
+                           100 - self.cam)
+
+    def gen_array(self, filename: str, resizing: bool = False):
+        image = cv2.imread(f"{self.theme}/{filename}",
+                           flags=cv2.IMREAD_UNCHANGED)
+        image_argb = cv2.cvtColor(image, code=cv2.COLOR_BGR2BGRA)
+        if resizing is True:
+            image_scale = cv2.resize(image_argb, (self.tile_size,
+                                                  self.tile_size))
+            return np.asarray(image_scale, dtype=np.uint8)
+        return np.asarray(image_argb, dtype=np.uint8)
+
+
+class Controler(MazeFront):
+    def __init__(self, config: dict, theme: str = 'classic',
+                 interface: bool = True) -> None:
+        super().__init__(config, theme, interface)
+
+    def close_window(self) -> None:
+        self.mlx_loop_exit(self.mlx)
+
+    def key_commands(self, key_num, *m):
+        if key_num == 32 and self.running_state is True:
+            self.erase_text()
+            text = self.console_text('PAUSE', 60)
+            console = self.create_mlx_image(700, 300)
+            self.image_to_memory(np.asarray(text), console)
+            self.put_to_screen(console.id, 20, 100)
+            self.mlx_destroy_image(self.mlx, console.id)
+            self.running_state = False
+            return
+        if key_num == 32 and self.running_state is False:
+            self.erase_text()
+            self.running_state = True
+            return
+        if key_num == 116:
+            theme = ['classic',
+                     'classic_red',
+                     'pokemon',
+                     'fallout',
+                     'minecraft']
+            active = self.theme.split('/')[1]
+            self.mlx_destroy_image(self.mlx, self.floor.id)
+            self.mlx_destroy_image(self.mlx, self.logo.id)
+            self.mlx_destroy_image(self.mlx, self.tile.id)
+            self.mlx_destroy_image(self.mlx, self.snap.id)
+            self.mlx_destroy_image(self.mlx, self.background.id)
+            try:
+                self.__init__(None, theme[theme.index(active) + 1], False)
+            except IndexError:
+                self.__init__(None, theme[0], False)
+            self.mlx_clear_window(self.mlx, self.win)
+            self.generator = self.generate_walls(parsed_data())
+            self.generate_background()
+            self.generate_logo()
+            self.generate_floor()
+            self.mask_creator()
+            self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITABLE, self.floor.id)
+            self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITABLE, self.logo.id)
+            self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITABLE, self.snap.id)
+            self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITABLE, self.tile.id)
+            self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITABLE,
+                          self.background.id)
+        if key_num == 65362:
+            if self.speed < 5:
+                self.speed += 1
+                self.erase_text()
+                text = self.console_text('SPEED ++', 60)
+                console = self.create_mlx_image(700, 300)
+                self.image_to_memory(np.asarray(text), console)
+                self.put_to_screen(console.id, 100, 100 - self.cam)
+                self.mlx_destroy_image(self.mlx, console.id)
+        if key_num == 65364:
+            if self.speed > 1:
+                self.speed -= 1
+                self.erase_text()
+                text = self.console_text('SPEED --', 60)
+                console = self.create_mlx_image(700, 300)
+                self.image_to_memory(np.asarray(text), console)
+                self.put_to_screen(console.id, 100, 100 - self.cam)
+                self.mlx_destroy_image(self.mlx, console.id)
+
+    def mouse_commands(self, mouse_num, x, y, *a):
+        logo_width = self.logo_texture.shape[1]
+        if mouse_num == 4:
+            if self.cam > 0:
+                # for _ in range(20):
+                self.cam -= 60
+                self.put_to_screen(self.background.id, 0, 0)
+                self.put_to_screen(
+                    self.logo.id,
+                    int((self.win_width / 2) - (logo_width / 2)),
+                    100 - self.cam
+                )
+                self.put_to_screen(self.floor.id, self.pos_x,
+                                   self.pos_y - self.cam)
+                self.put_to_screen(self.snap.id, self.pos_x,
+                                   self.pos_y - self.cam)
+        if mouse_num == 5:
+            if self.cam < self.win_height:
+                # for _ in range(20):
+                self.cam += 60
+                self.put_to_screen(self.background.id, 0, 0)
+                self.put_to_screen(
+                    self.logo.id,
+                    int((self.win_width / 2) - (logo_width / 2)),
+                    100 - self.cam
+                )
+                self.put_to_screen(self.floor.id, self.pos_x,
+                                   self.pos_y - self.cam)
+                self.put_to_screen(self.snap.id, self.pos_x,
+                                   self.pos_y - self.cam)
+
+    def generate(self, *a):
+        if self.running_state is False:
+            return
+        start = time()
+        try:
+            # for _ in range():
+            for _ in range(self.speed):
+                next(self.generator)
+                # sleep(0.5)
+        except StopIteration:
+            pass
+        self.put_to_screen(self.snap.id, self.pos_x, self.pos_y - self.cam)
+        end = time()
+        print(end - start)
+
 
 def parsed_data():
     parsed = []
@@ -35,365 +407,22 @@ def parsed_data():
         for nb_d, d in enumerate(to_parse):
             for nb_char, char in enumerate(d[:-1]):
                 parsed.append([nb_char, nb_d, d[nb_char]])
-    print(parsed)
     return parsed
 
 
-class ImgData():
-    def __init__(self, id=None, width=None, height=None, data=None, bpp=None, sl=None, iformat=None):
-        self.id = id
-        self.width = width
-        self.height = height
-        self.data = data
-        self.bpp = bpp
-        self.sl = sl
-        self.iformat = iformat
-
-    @staticmethod
-    def image_constitution(path, m: Mlx):
-        img_convert = m.mlx_png_file_to_image(m.mlx_ptr, path)
-        img_id, img_width, img_height = img_convert
-        img_data, img_bpp, img_sl, img_iformat = m.mlx_get_data_addr(img_id)
-        image = ImgData(img_id,
-                        img_width,
-                        img_height,
-                        img_data,
-                        img_bpp,
-                        img_sl,
-                        img_iformat)
-        return image
-
-
-def create_mlx_image(width, height, m: Mlx):
-    mlx_image = ImgData()
-    mlx_image.id = m.mlx_new_image(m.mlx_ptr, width, height)
-    mlx_image.width, mlx_image.height = (width, height)
-    mlx_image.data, mlx_image.bpp, mlx_image.sl, mlx_image.iformat = m.mlx_get_data_addr(mlx_image.id)
-    return mlx_image
-
-
-def image_to_memory(array, mlx_image: ImgData):
-    buffer = np.frombuffer(mlx_image.data, dtype=np.uint8).reshape(array.shape)
-    buffer[:, :, 0] = array[:, :, 2]
-    buffer[:, :, 1] = array[:, :, 1]
-    buffer[:, :, 2] = array[:, :, 0]
-    buffer[:, :, 3] = array[:, :, 3]
-
-
-class MazeVisualizer(Mlx):
-    def __init__(self, theme: str) -> None:
-        super().__init__()
-        self.theme = theme
-        self.tilesize = 32
-        self.maze_width = 25
-        self.maze_height = 20
-        self.mlx_ptr = self.mlx_init()
-        self.width, self.height = self.mlx_get_screen_size(self.mlx_ptr)[1:]
-        self.win_ptr = self.mlx_new_window(self.mlx_ptr, self.width,
-                                           self.height,
-                                           "A_maze_ing : Game poetry")
-        self.view_port = 0
-        self.logo = None
-        self.background = None
-        self.floor = None
-        self.tile = create_mlx_image(self.tilesize * 3, self.tilesize * 3, self)
-        self.wall_tile = Image.open(f"themes/{self.theme}/wall_texture.png").convert('RGBA')
-        self.path_tile = Image.open(f"themes/{self.theme}/path_texture.png").convert('RGBA')
-        self.path_wall_patch = Image.alpha_composite(self.path_tile, self.wall_tile)
-        self.wall_mask = np.zeros((self.tilesize * 3, self.tilesize * 3, 4), dtype=np.uint8)
-        self.snapshot = np.zeros((self.height*4, self.width, 4), dtype=np.uint8)
-        self.snap = create_mlx_image(self.width, self.height * 4, self)
-        self.snap_buf = np.frombuffer(self.snap.data, dtype=np.uint8).reshape(self.snapshot.shape)
-        self.grid = []
-        self.start = None
-        self.end = 0
-        self.mlx_sync(self.mlx_ptr, self.SYNC_WIN_COMPLETED, self.win_ptr)
-
-    def generate_floor(self):
-        start_pos = (int((self.width / 2) - ((self.maze_width / 2) * self.tilesize * 2)),
-                     int(500))
-        if self.floor is None:
-            floor_height = (self.maze_height * 2 + 1) * self.tilesize
-            floor_width = (self.maze_width * 2 + 1) * self.tilesize
-            floor = np.zeros((floor_height, floor_width, 4), dtype=np.uint8)
-            self.floor = create_mlx_image(floor_width, floor_height, self)
-            for w in range(0, floor_width, self.tilesize):
-                for h in range(0, floor_height, self.tilesize):
-                    floor[h:h+self.tilesize, w:w+self.tilesize] = self.path_wall_patch
-            image_to_memory(floor, self.floor)
-        self.mlx_put_image_to_window(self.mlx_ptr,
-                                     self.win_ptr,
-                                     self.floor.id,
-                                     start_pos[0],
-                                     start_pos[1] - self.view_port)
-
-    def generate_walls(self, data=None):
-        self.start = time()
-        start_pos = (int((self.width / 2) - ((self.maze_width / 2) * self.tilesize * 2)),
-                     int(500))
-        appending = True
-        if data is None:
-            data = self.grid
-            appending = False
-        for d in data:
-            binary = bin(int(d[2], 16))[2:].zfill(4)
-            if appending is True:
-                for letter in '0123456789ABCDEF':
-                    try:
-                        self.grid.pop(self.grid.index([d[0], d[1], letter]))
-                    except Exception:
-                        continue
-                self.grid.append([d[0], d[1], d[2]])
-                self.grid = sorted(self.grid, key=lambda item: item[0] + item[1])
-            tile = self.tilesize
-            pos = [start_pos[0] + d[0] * (tile * 2),
-                   start_pos[1] + d[1] * (tile * 2)]
-            self.wall_mask[0:tile, tile:tile*2] = self.wall_tile
-            self.wall_mask[tile:tile*2, tile*2:tile*3] = self.wall_tile
-            self.wall_mask[tile*2:tile*3, tile:tile*2] = self.wall_tile
-            self.wall_mask[tile:tile*2, 0:tile] = self.wall_tile
-            self.wall_mask[tile:tile*2, tile:tile*2] = self.path_tile
-            if int(binary[-1]) == 0:
-                self.wall_mask[0:tile, tile:tile*2] = self.path_tile
-            if int(binary[-2]) == 0:
-                self.wall_mask[tile:tile*2, tile*2:tile*3] = self.path_tile
-            if int(binary[-3]) == 0:
-                self.wall_mask[tile*2:tile*3, tile:tile*2] = self.path_tile
-            if int(binary[-4]) == 0:
-                self.wall_mask[tile:tile*2, 0:tile] = self.path_tile
-            self.snap_buf[pos[1]:pos[1] + (self.tilesize * 3),
-                          pos[0]:pos[0] + (self.tilesize * 3), 0] = self.wall_mask[:,:,2]
-            self.snap_buf[pos[1]:pos[1] + (self.tilesize * 3),
-                          pos[0]:pos[0] + (self.tilesize * 3), 1] = self.wall_mask[:,:,1]
-            self.snap_buf[pos[1]:pos[1] + (self.tilesize * 3),
-                          pos[0]:pos[0] + (self.tilesize * 3), 2] = self.wall_mask[:,:,0]
-            self.snap_buf[pos[1]:pos[1] + (self.tilesize * 3),
-                          pos[0]:pos[0] + (self.tilesize * 3), 3] = self.wall_mask[:,:,3]
-            image_to_memory(self.wall_mask, self.tile)
-            self.mlx_put_image_to_window(self.mlx_ptr,
-                                         self.win_ptr,
-                                         self.tile.id,
-                                         pos[0],
-                                         pos[1] - self.view_port)
-            self.end += time()
-            yield self.end - self.start
-
-    # def generate_ways(self, data=None):
-    #     start = (int((self.width / 2) - ((self.maze_width / 2) * self.tilesize * 2)),
-    #              int(500))
-    #     entrance_way = [start[0] + d * (self.tilesize * 2) for d in data[0]]
-    #     exit_way = [start[0] + d * (self.tilesize * 2) for d in data[1]]
-    #     entrance = ImgData.image_constitution(f"themes/{self.theme}/entrance.png", self)
-    #     self.mlx_put_image_to_window(self.mlx_ptr,
-    #                                  self.win_ptr,
-    #                                  entrance.id,
-    #                                  entrance_way[0],
-    #                                  entrance_way[1])
-    #     exiting = ImgData.image_constitution(f"themes/{self.theme}/exit.png", self)
-    #     self.mlx_put_image_to_window(self.mlx_ptr,
-    #                                  self.win_ptr,
-    #                                  exiting.id,
-    #                                  exit_way[0],
-    #                                  exit_way[1])
-
-
-class Controler(MazeVisualizer):
-    def __init__(self, theme: str, data: list):
-        super().__init__(theme)
-        self.wall_builder = self.generate_walls(data)
-        self.speed = 0.001
-        self.running_state = True
-
-    @staticmethod
-    def close(m: Mlx):
-        m.mlx_destroy_image(m.mlx_ptr, m.background.id)
-        m.mlx_destroy_image(m.mlx_ptr, m.logo.id)
-        m.mlx_destroy_image(m.mlx_ptr, m.floor.id)
-        m.mlx_loop_exit(m.mlx_ptr)
-
-    @staticmethod
-    def erase_text(m):
-        patchwork = Image.open(f"themes/{m.theme}/background_texture.png")
-        p_width, p_height = patchwork.size
-        background = Image.new('RGBA', (900, 400))
-        for w in range(0, 900, p_width):
-            for h in range(0, 400, p_height):
-                background.paste(patchwork, (w, h))
-        eraser = create_mlx_image(900, 400, m)
-        image_to_memory(np.array(background), eraser)
-        m.mlx_put_image_to_window(m.mlx_ptr, m.win_ptr, eraser.id, 0, 0)
-        m.mlx_destroy_image(m.mlx_ptr, eraser.id)
-
-    @staticmethod
-    def console_text(string: str, font_size: int, self: Mlx):
-        image = Image.new('RGBA', (700, 300), (0, 0, 0, 200))
-        draw = ImageDraw.Draw(image)
-        font = ImageFont.truetype(f'themes/{self.theme}/font.ttf', font_size)
-        draw.text((150, 120), string, font=font)
-        return image
-
-    @staticmethod
-    def keyboard_commands(keynum, self: MazeVisualizer):
-        print(f"You've pressed key number : {keynum}")
-        if keynum == 32 and self.running_state is True:
-            self.erase_text(self)
-            text = self.console_text('PAUSE', 60, self)
-            console = create_mlx_image(700, 300, self)
-            image_to_memory(np.array(text), console)
-            self.mlx_put_image_to_window(self.mlx_ptr,
-                                         self.win_ptr,
-                                         console.id,
-                                         100,
-                                         100 - self.view_port)
-            self.mlx_destroy_image(self.mlx_ptr, console.id)
-            self.running_state = False
-            return
-        if keynum == 32 and self.running_state is False:
-            self.erase_text(self)
-            self.running_state = True
-            return
-        if keynum == 65362:
-            if self.speed > 0.0001:
-                self.speed /= 3
-                self.erase_text(self)
-                text = self.console_text('SPEED ++', 60, self)
-                console = create_mlx_image(700, 300, self)
-                image_to_memory(np.array(text), console)
-                self.mlx_put_image_to_window(self.mlx_ptr,
-                                             self.win_ptr,
-                                             console.id,
-                                             100,
-                                             100 - self.view_port)
-                self.mlx_destroy_image(self.mlx_ptr, console.id)
-        if keynum == 65364:
-            if self.speed < 0.04:
-                self.speed *= 3
-                self.erase_text(self)
-                text = self.console_text('SPEED --', 60, self)
-                console = create_mlx_image(700, 300, self)
-                image_to_memory(np.array(text), console)
-                self.mlx_put_image_to_window(self.mlx_ptr,
-                                             self.win_ptr,
-                                             console.id,
-                                             100,
-                                             100 - self.view_port)
-                self.mlx_destroy_image(self.mlx_ptr, console.id) 
-        if keynum == 116:
-            #  Change the theme of th visualizer
-            theme = ['classic',
-                     'classic_red',
-                     'pokemon',
-                     'fallout',
-                     'minecraft']
-            try:
-                self.theme = theme[theme.index(self.theme) + 1]
-            except IndexError:
-                self.theme = theme[0]
-            self.wall_tile = Image.open(f"themes/{self.theme}/wall_texture.png").convert('RGBA')
-            self.path_tile = Image.open(f"themes/{self.theme}/path_texture.png").convert('RGBA')
-            self.mlx_destroy_image(self.mlx_ptr, self.background.id)
-            self.mlx_destroy_image(self.mlx_ptr, self.logo.id)
-            self.mlx_destroy_image(self.mlx_ptr, self.floor.id)
-            self.background = None
-            self.logo = None
-            self.floor = None
-            self.snap_buf = np.frombuffer(self.snap.data, dtype=np.uint8).reshape(self.snapshot.shape)
-            self.snap_buf[:, :, :] = self.snapshot[:, :, :]
-            base_assets(self)
-            self.path_wall_patch = Image.alpha_composite(self.path_tile, self.wall_tile)
-            self.generate_floor()
-            self.wall_builder = self.generate_walls()
-            self.mlx_sync(self.mlx_ptr, self.SYNC_WIN_COMPLETED, self.win_ptr)
-
-    @staticmethod
-    def mouse_commands(mouse_num, x, y, self: MazeVisualizer):
-        if mouse_num == 4:
-            if self.view_port > 0:
-                # image_to_memory(self.snapshot, self.snap)
-                for _ in range(3):
-                    self.view_port -= 30
-                    base_assets(self)
-                    self.generate_floor()
-                    self.mlx_put_image_to_window(self.mlx_ptr,
-                                                self.win_ptr,
-                                                self.snap.id,
-                                                0,
-                                                0 - self.view_port)
-                    self.mlx_sync(self.mlx_ptr, self.SYNC_WIN_COMPLETED, self.win_ptr)
-        if mouse_num == 5:
-            if self.view_port < self.height:
-                # image_to_memory(self.snapshot, self.snap)
-                for _ in range(3):
-                    self.view_port += 30
-                    base_assets(self)
-                    self.generate_floor()
-                    self.mlx_put_image_to_window(self.mlx_ptr,
-                                                self.win_ptr,
-                                                self.snap.id,
-                                                0,
-                                                0 - self.view_port)
-                    self.mlx_sync(self.mlx_ptr, self.SYNC_WIN_COMPLETED, self.win_ptr)
-
-    @staticmethod
-    def dig(self):
-        if self.running_state is False:
-            return
-        try:
-            start = time()
-            next(self.wall_builder)
-            end = time()
-            print(end - start)
-        except StopIteration:
-            pass
-
-
-def base_assets(m: MazeVisualizer):
-    if m.background is None and m.logo is None:
-        patchwork = Image.open(f"themes/{m.theme}/background_texture.png").convert('RGBA')
-        m.background = create_mlx_image(m.width, m.height, m)
-        p_array = np.array(patchwork)
-        p_width, p_height = patchwork.size
-        background = np.zeros((m.height, m.width, 4), dtype=np.uint8)
-        for w in range(0, m.width, p_width):
-            for h in range(0, m.height, p_height):
-                h_size = m.height - h if h + p_height > m.height else p_height
-                w_size = m.width - w if w + p_width > m.width else p_width
-                background[h:h + h_size, w:w + w_size] = p_array[0:h_size, 0:w_size]
-        m.logo = ImgData.image_constitution(f"themes/{m.theme}/logo.png", m)
-        image_to_memory(background, m.background)
-    m.mlx_put_image_to_window(m.mlx_ptr,
-                              m.win_ptr,
-                              m.background.id,
-                              0,
-                              0)
-    m.mlx_put_image_to_window(m.mlx_ptr,
-                              m.win_ptr,
-                              m.logo.id,
-                              int((m.width / 2) - (m.logo.width / 2)),
-                              100 - m.view_port)
-
-
-def controler(m: Mlx):
-    pass
-
-
-def maze_visualizer() -> None:
-    theme = 'pokemon'
-    m = Controler(theme, generation)
-    base_assets(m)
+def render():
+    config = read_config("config.txt")
+    m = Controler(config, 'pokemon')
+    m.generator = m.generate_walls(parsed_data())
+    m.mlx_hook(m.win, 33, 0, Controler.close_window, m)
+    m.generate_background()
+    m.generate_logo()
     m.generate_floor()
-    m.mlx_loop_hook(m.mlx_ptr, controler, m)
-    m.mlx_hook(m.win_ptr, 33, 0, m.close, m)
-    m.mlx_key_hook(m.win_ptr, m.keyboard_commands, m)
-    m.mlx_mouse_hook(m.win_ptr, m.mouse_commands, m)
-    m.mlx_loop_hook(m.mlx_ptr, m.dig, m)
-    m.mlx_loop(m.mlx_ptr)
-    snapshot = tracemalloc.take_snapshot()
-    top_stats = snapshot.statistics('lineno')
-
-    for stat in top_stats[:10]:
-        print(stat)
+    m.mlx_key_hook(m.win, m.key_commands, m)
+    m.mlx_mouse_hook(m.win, m.mouse_commands, m)
+    m.mlx_loop_hook(m.mlx, m.generate, None)
+    m.mlx_loop(m.mlx)
 
 
 if __name__ == '__main__':
-    maze_visualizer()
+    render()

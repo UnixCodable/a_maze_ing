@@ -2,6 +2,7 @@
 import sys
 from config_parser import read_config, MazeConfig
 from mazegen import MazeGenerator
+from maze_visualizer import render
 
 
 def main() -> None:
@@ -16,7 +17,7 @@ def main() -> None:
         gen = MazeGenerator(config)         # set up
         gen.generate()      # build maze
         gen.save()                          # write file
-        
+        render()
         # display will be: MazeDisplay(gen).show()  ← later
         
     except ValueError as e:

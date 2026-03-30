@@ -197,7 +197,7 @@ class MazeGenerator():
             self.grid[y][x] &= ~self.WEST
         elif x == self.width - 1:
             self.grid[y][x] &= ~self.EAST
-    
+
     def _solve(self) -> None:
         """
         BFS from entry to exit to find the shortest valid path.
@@ -247,12 +247,12 @@ class MazeGenerator():
                     queue.append((nx, ny, path + letter))
         
         self.path = ""  # no solution found
-    
+
     def generate(self) -> None:
         """
         PUBLIC METHOD — call this to build the maze.
         Calls all private methods in the correct order:
-        
+
         1. _init_grid        → blank grid, all walls closed
         2. _get_42_cells     → figure out where "42" goes
         3. _lock_42_cells    → freeze those cells (DFS will skip them)
@@ -262,7 +262,7 @@ class MazeGenerator():
         7. _solve            → find shortest path, store in self.path
         """
         self._init_grid()
-        
+
         pattern = self._get_42_cells()
         if pattern is None:
             print("Error: maze too small to display the '42' pattern.")
