@@ -3,8 +3,8 @@ from typing import Tuple, Optional
 
 
 class MazeConfig(BaseModel):
-    width: int = Field(ge=10, le=30)
-    height: int = Field(ge=10, le=30)
+    width: int = Field(ge=2, le=500)
+    height: int = Field(ge=2, le=500)
     entry: Tuple[int, int]
     exit: Tuple[int, int]
     output_file: str
@@ -74,6 +74,8 @@ def read_config(filename: str) -> dict:
 
     except OSError:
         raise ValueError("Unable to read configuration file")
+    except PermissionError:
+        raise (" add permission to the file")
 
 
 if __name__ == "__main__":
