@@ -6,7 +6,7 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/03/27 17:04:43 by lbordana        #+#    #+#               #
-#  Updated: 2026/03/30 03:59:32 by lbordana        ###   ########.fr        #
+#  Updated: 2026/03/30 17:07:49 by lbordana        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -16,7 +16,7 @@ from PIL.Image import Image as PillowImage
 from typing import Any
 import numpy as np
 import cv2
-from time import sleep, time
+# from time import sleep, time
 from typing import Generator
 from config_parser import read_config
 
@@ -63,8 +63,8 @@ class MazeInterface(Mlx):
         self.tile_size = int(32 * self.scale_tile_size())
         self.base_width = (self.maze_width * 2 + 1) * self.tile_size
         self.base_height = (self.maze_height * 2 + 1) * self.tile_size
-        self.win_width: int = (self.maze_width * 2 + 1) * self.tile_size + 400
-        self.win_height: int = (self.maze_height * 2 + 1) * self.tile_size + 700
+        self.win_width: int = self.get_window_size()[0]
+        self.win_height: int = self.get_window_size()[1]
         self.win = self.mlx_new_window(
                 self.mlx,
                 self.win_width,
@@ -74,7 +74,8 @@ class MazeInterface(Mlx):
         self.pos_x = int((self.win_width / 2) - self.base_width / 2)
         self.pos_y = 500
         self.running_state = True
-        self.cam = 0
+        self.view_port_h = 0
+        self.view_port_w = 0
 
     def put_to_screen(self, img_id: Any, pos_x: int, pos_y: int) -> None:
         """Method that use the mlx_put_image_to_window method
@@ -132,6 +133,16 @@ class MazeInterface(Mlx):
         # if self.maze_height > 200 or self.maze_width > 200:
         #     scale = 0.1
         return scale
+
+    def get_window_size(self):
+        screen_size = self.mlx_get_screen_size(self.mlx)
+        width = (self.maze_width * 2 + 1) * self.tile_size + 400
+        height = (self.maze_height * 2 + 1) * self.tile_size + 700
+        if width > screen_size[1]:
+            width = screen_size[1]
+        if height > screen_size[2]:
+            height = screen_size[2]
+        return (width, height)
 
 
 class MazeFront(MazeInterface):
@@ -197,10 +208,13 @@ class MazeFront(MazeInterface):
                 background[:, :, 3] = 255
         eraser = self.create_mlx_image(900, 400)
         self.image_to_memory(background, eraser)
-        self.put_to_screen(eraser.id, 0, 0)
+        self.put_to_screen(eraser.id,
+                           0 - self.view_port_h,
+                           0 - self.view_port_h)
         self.put_to_screen(self.logo.id,
-                           int((self.win_width / 2) - (logo_width / 2)),
-                           100 - self.cam)
+                           int((self.win_width / 2) -
+                               (logo_width / 2)) - self.view_port_w,
+                           100 - self.view_port_h)
         self.mlx_destroy_image(self.mlx, eraser.id)
 
     def mask_creator(self) -> None:
@@ -219,7 +233,9 @@ class MazeFront(MazeInterface):
             for h in range(0, self.base_height, self.tile_size):
                 floor[h:h+self.tile_size, w:w+self.tile_size] = self.wall_path
         self.image_to_memory(floor, self.floor)
-        self.put_to_screen(self.floor.id, self.pos_x, self.pos_y - self.cam)
+        self.put_to_screen(self.floor.id,
+                           self.pos_x - self.view_port_w,
+                           self.pos_y - self.view_port_h)
 
     def generate_walls(self, data: list = None) -> Generator:
 
@@ -265,8 +281,10 @@ class MazeFront(MazeInterface):
         width = self.logo_texture.shape[1]
         self.image_to_memory(self.logo_texture, self.logo)
         self.put_to_screen(self.logo.id,
-                           int((self.win_width / 2) - (width / 2)),
-                           100 - self.cam)
+                           int((self.win_width / 2) -
+                               (width / 2)) - self.view_port_w,
+                           100 - self.view_port_h)
+        self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITE, self.logo.id)
 
     def gen_array(self, filename: str, resizing: bool = False):
         image = cv2.imread(f"{self.theme}/{filename}",
@@ -288,12 +306,15 @@ class Controler(MazeFront):
         self.mlx_loop_exit(self.mlx)
 
     def key_commands(self, key_num, *m):
+        logo_width = self.logo_texture.shape[1]
         if key_num == 32 and self.running_state is True:
             self.erase_text()
             text = self.console_text('PAUSE', 60)
             console = self.create_mlx_image(700, 300)
             self.image_to_memory(np.asarray(text), console)
-            self.put_to_screen(console.id, 20, 100)
+            self.put_to_screen(console.id,
+                               100 - self.view_port_w,
+                               100 - self.view_port_h)
             self.mlx_destroy_image(self.mlx, console.id)
             self.running_state = False
             return
@@ -323,76 +344,161 @@ class Controler(MazeFront):
             self.generate_logo()
             self.generate_floor()
             self.mask_creator()
-            self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITABLE, self.floor.id)
-            self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITABLE, self.logo.id)
-            self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITABLE, self.snap.id)
-            self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITABLE, self.tile.id)
-            self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITABLE,
-                          self.background.id)
-        if key_num == 65362:
-            if self.speed < 5:
-                self.speed += 1
+            self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITE, self.floor.id)
+            self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITE, self.logo.id)
+            self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITE, self.snap.id)
+            self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITE, self.tile.id)
+            self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITE, self.background.id)
+        if key_num == 61:
+            if self.speed < 500:
+                if self.speed < 5:
+                    self.speed += 1
+                elif self.speed < 20:
+                    self.speed += 5
+                elif self.speed < 100:
+                    self.speed += 20
+                elif self.speed < 500:
+                    self.speed += 100
                 self.erase_text()
-                text = self.console_text('SPEED ++', 60)
+                text = self.console_text(f'SPEED {self.speed}', 60)
                 console = self.create_mlx_image(700, 300)
                 self.image_to_memory(np.asarray(text), console)
-                self.put_to_screen(console.id, 100, 100 - self.cam)
+                self.put_to_screen(console.id,
+                                   100 - self.view_port_w,
+                                   100 - self.view_port_h)
                 self.mlx_destroy_image(self.mlx, console.id)
-        if key_num == 65364:
+        if key_num == 45:
             if self.speed > 1:
-                self.speed -= 1
+                if self.speed <= 5:
+                    self.speed -= 1
+                elif self.speed <= 20:
+                    self.speed -= 5
+                elif self.speed <= 100:
+                    self.speed -= 20
+                elif self.speed <= 500:
+                    self.speed -= 100
                 self.erase_text()
-                text = self.console_text('SPEED --', 60)
+                text = self.console_text(f'SPEED {self.speed}', 60)
                 console = self.create_mlx_image(700, 300)
                 self.image_to_memory(np.asarray(text), console)
-                self.put_to_screen(console.id, 100, 100 - self.cam)
+                self.put_to_screen(console.id,
+                                   100 - self.view_port_w,
+                                   100 - self.view_port_h)
                 self.mlx_destroy_image(self.mlx, console.id)
+        if key_num == 65361 or key_num == 97:
+            if self.view_port_w > self.base_width * -1:
+                # for _ in range(20):
+                self.view_port_w -= 200
+                self.put_to_screen(self.background.id, 0, 0)
+                self.put_to_screen(
+                    self.logo.id,
+                    int((self.win_width / 2) - (logo_width / 2)),
+                    100 - self.view_port_h
+                )
+                self.put_to_screen(self.floor.id,
+                                   self.pos_x - self.view_port_w,
+                                   self.pos_y - self.view_port_h)
+                self.put_to_screen(self.snap.id,
+                                   self.pos_x - self.view_port_w,
+                                   self.pos_y - self.view_port_h)
+        if key_num == 65363 or key_num == 100:
+            if self.view_port_w < self.base_width:
+                # for _ in range(20):
+                self.view_port_w += 200
+                self.put_to_screen(self.background.id, 0, 0)
+                self.put_to_screen(
+                    self.logo.id,
+                    int((self.win_width / 2) - (logo_width / 2)),
+                    100 - self.view_port_h
+                )
+                self.put_to_screen(self.floor.id,
+                                   self.pos_x - self.view_port_w,
+                                   self.pos_y - self.view_port_h)
+                self.put_to_screen(self.snap.id,
+                                   self.pos_x - self.view_port_w,
+                                   self.pos_y - self.view_port_h)
+        if key_num == 65362 or key_num == 119:
+            if self.view_port_h > 0:
+                # for _ in range(20):
+                self.view_port_h -= 200
+                self.put_to_screen(self.background.id, 0, 0)
+                self.put_to_screen(
+                    self.logo.id,
+                    int((self.win_width / 2) - (logo_width / 2)),
+                    100 - self.view_port_h
+                )
+                self.put_to_screen(self.floor.id,
+                                   self.pos_x - self.view_port_w,
+                                   self.pos_y - self.view_port_h)
+                self.put_to_screen(self.snap.id,
+                                   self.pos_x - self.view_port_w,
+                                   self.pos_y - self.view_port_h)
+        if key_num == 65364 or key_num == 115:
+            if self.view_port_h < self.base_height:
+                self.view_port_h += 200
+                self.put_to_screen(self.background.id, 0, 0)
+                self.put_to_screen(
+                    self.logo.id,
+                    int((self.win_width / 2) - (logo_width / 2)),
+                    100 - self.view_port_h
+                )
+                self.put_to_screen(self.floor.id,
+                                   self.pos_x - self.view_port_w,
+                                   self.pos_y - self.view_port_h)
+                self.put_to_screen(self.snap.id,
+                                   self.pos_x - self.view_port_w,
+                                   self.pos_y - self.view_port_h)
 
     def mouse_commands(self, mouse_num, x, y, *a):
         logo_width = self.logo_texture.shape[1]
         if mouse_num == 4:
-            if self.cam > 0:
+            if self.view_port_h > 0:
                 # for _ in range(20):
-                self.cam -= 60
+                self.view_port_h -= 60
                 self.put_to_screen(self.background.id, 0, 0)
                 self.put_to_screen(
                     self.logo.id,
                     int((self.win_width / 2) - (logo_width / 2)),
-                    100 - self.cam
+                    100 - self.view_port_h
                 )
-                self.put_to_screen(self.floor.id, self.pos_x,
-                                   self.pos_y - self.cam)
-                self.put_to_screen(self.snap.id, self.pos_x,
-                                   self.pos_y - self.cam)
+                self.put_to_screen(self.floor.id,
+                                   self.pos_x - self.view_port_w,
+                                   self.pos_y - self.view_port_h)
+                self.put_to_screen(self.snap.id,
+                                   self.pos_x - self.view_port_w,
+                                   self.pos_y - self.view_port_h)
         if mouse_num == 5:
-            if self.cam < self.win_height:
-                # for _ in range(20):
-                self.cam += 60
+            if self.view_port_h < self.base_height:
+                self.view_port_h += 60
                 self.put_to_screen(self.background.id, 0, 0)
                 self.put_to_screen(
                     self.logo.id,
                     int((self.win_width / 2) - (logo_width / 2)),
-                    100 - self.cam
+                    100 - self.view_port_h
                 )
-                self.put_to_screen(self.floor.id, self.pos_x,
-                                   self.pos_y - self.cam)
-                self.put_to_screen(self.snap.id, self.pos_x,
-                                   self.pos_y - self.cam)
+                self.put_to_screen(self.floor.id,
+                                   self.pos_x - self.view_port_w,
+                                   self.pos_y - self.view_port_h)
+                self.put_to_screen(self.snap.id,
+                                   self.pos_x - self.view_port_w,
+                                   self.pos_y - self.view_port_h)
 
     def generate(self, *a):
         if self.running_state is False:
             return
-        start = time()
+        # start = time()
         try:
             # for _ in range():
             for _ in range(self.speed):
                 next(self.generator)
                 # sleep(0.5)
         except StopIteration:
-            pass
-        self.put_to_screen(self.snap.id, self.pos_x, self.pos_y - self.cam)
-        end = time()
-        print(end - start)
+            self.running_state = False
+        self.put_to_screen(self.snap.id,
+                           self.pos_x - self.view_port_w,
+                           self.pos_y - self.view_port_h)
+        # end = time()
+        # print(end - start)
 
 
 def parsed_data():
