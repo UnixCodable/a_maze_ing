@@ -6,7 +6,7 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/03/27 17:04:43 by lbordana        #+#    #+#               #
-#  Updated: 2026/03/30 17:07:49 by lbordana        ###   ########.fr        #
+#  Updated: 2026/03/30 19:59:06 by lbordana        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -115,13 +115,13 @@ class MazeInterface(Mlx):
             self.mlx_get_data_addr(mlx_image.id)
         return mlx_image
 
-    def scale_tile_size(self) -> int:
+    def scale_tile_size(self) -> float:
         """Define the size of the tile, based on the size of the maze
 
         Returns:
             int: Returns the multiplier scale of a tile
         """
-        scale = 1
+        scale: float = 1
         if self.maze_height < 12 or self.maze_width < 20:
             scale = 1.4
         if self.maze_height > 30 or self.maze_width > 50:
@@ -130,8 +130,6 @@ class MazeInterface(Mlx):
             scale = 0.4
         if self.maze_height > 150 or self.maze_width > 200:
             scale = 0.2
-        # if self.maze_height > 200 or self.maze_width > 200:
-        #     scale = 0.1
         return scale
 
     def get_window_size(self):
@@ -156,6 +154,7 @@ class MazeFront(MazeInterface):
         self.wall_texture = self.gen_array('wall_texture.png', True)
         self.path_texture = self.gen_array('path_texture.png', True)
         self.logo_texture = self.gen_array('logo.png')
+        self.res_texture = self.gen_array('resolution_texture.png', True)
         self.wall_path = \
             np.where(self.wall_texture == 0, self.path_texture,
                      self.wall_texture)
@@ -167,12 +166,15 @@ class MazeFront(MazeInterface):
                                                 self.win_height)
         self.snapshot = np.zeros((self.base_height, self.base_width, 4),
                                  dtype=np.uint8)
+        self.res = np.zeros((self.base_height, self.base_width, 4),
+                            dtype=np.uint8)
         self.logo = self.create_mlx_image(self.logo_texture.shape[1],
                                           self.logo_texture.shape[0])
         self.snap = self.create_mlx_image(self.base_width, self.base_height)
         self.snap_buf = (np.frombuffer(self.snap.data, dtype=np.uint8).
                          reshape(self.snapshot.shape))
         self.snap_buf.fill(0)
+        self.res.fill(0)
         self.last_bin = '1111'
         self.generator = None
         self.speed = 1
@@ -284,7 +286,10 @@ class MazeFront(MazeInterface):
                            int((self.win_width / 2) -
                                (width / 2)) - self.view_port_w,
                            100 - self.view_port_h)
-        self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITE, self.logo.id)
+        self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITABLE, self.logo.id)
+
+    def generate_resolution(self, path: list) -> None:
+        pass
 
     def gen_array(self, filename: str, resizing: bool = False):
         image = cv2.imread(f"{self.theme}/{filename}",
@@ -344,11 +349,12 @@ class Controler(MazeFront):
             self.generate_logo()
             self.generate_floor()
             self.mask_creator()
-            self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITE, self.floor.id)
-            self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITE, self.logo.id)
-            self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITE, self.snap.id)
-            self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITE, self.tile.id)
-            self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITE, self.background.id)
+            self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITABLE, self.floor.id)
+            self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITABLE, self.logo.id)
+            self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITABLE, self.snap.id)
+            self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITABLE, self.tile.id)
+            self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITABLE,
+                          self.background.id)
         if key_num == 61:
             if self.speed < 500:
                 if self.speed < 5:
@@ -518,6 +524,7 @@ def parsed_data():
 
 def render():
     config = read_config("config.txt")
+    print(config)
     m = Controler(config, 'pokemon')
     m.generator = m.generate_walls(parsed_data())
     m.mlx_hook(m.win, 33, 0, Controler.close_window, m)
