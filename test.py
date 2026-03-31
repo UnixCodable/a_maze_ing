@@ -5,4 +5,8 @@ import cv2
 import time
 import ctypes
 
-read = cv2.imread()
+numbers = (1, 1)
+
+numbers.
+
+print(numbers)
