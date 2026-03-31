@@ -15,6 +15,7 @@ class MazeGenerator():
         self.pattern_cells: set[tuple[int, int]] = set()
 
         self.path: str = ""
+        self.frames = []
 
     def _init_grid(self) -> None:
 
@@ -26,7 +27,9 @@ class MazeGenerator():
         nx, ny = x + dx, y + dy
 
         self.grid[y][x] &= ~direction
+        self.animate(x, y)
         self.grid[ny][nx] &= ~self.OPPOSITE[direction]
+        self.animate(nx, ny)
 
     def _get_42_cells(self) -> set[tuple[int, int]] | None:
         DIGIT_W, DIGIT__H, GAP = 3, 5, 1
@@ -103,6 +106,7 @@ class MazeGenerator():
                     self._carve_wall(x, y, direction)
                     visited.add((nx, ny))
                     stack.append((nx, ny))
+                    self.animate(nx, ny)
                     moved = True
                     break
 
@@ -173,30 +177,6 @@ class MazeGenerator():
         # Add wall on both sides
         self.grid[cy][cx] |= direction
         self.grid[ny][nx] |= self.OPPOSITE[direction]
-
-    def _open_border(self, x: int, y: int) -> None:
-        """
-        Removes the outer border wall for a cell that sits on the maze edge.
-        Entry and exit cells need one wall removed
-        so the player can enter/exit.
-        
-        Determines which side to open based on position:
-        top row    → remove NORTH
-        bottom row → remove SOUTH
-        left col   → remove WEST
-        right col  → remove EAST
-        
-        Args:
-            x, y: the entry or exit cell coordinates
-        """
-        if y == 0:
-            self.grid[y][x] &= ~self.NORTH
-        elif y == self.height - 1:
-            self.grid[y][x] &= ~self.SOUTH
-        elif x == 0:
-            self.grid[y][x] &= ~self.WEST
-        elif x == self.width - 1:
-            self.grid[y][x] &= ~self.EAST
     
     def _solve(self) -> None:
         """
@@ -245,6 +225,7 @@ class MazeGenerator():
                 if (nx, ny) not in visited:
                     visited.add((nx, ny))
                     queue.append((nx, ny, path + letter))
+                    self.frames.append([nx, ny, -1])
         
         self.path = ""  # no solution found
     
@@ -274,10 +255,8 @@ class MazeGenerator():
         self._run_dfs()
         self._fix_open_areas()
         
-        # self._open_border(*self.config.entry)
-        # self._open_border(*self.config.exit)
-        
         self._solve()
+        self.animate_short_path()
     
     def save(self) -> None:
         """
@@ -302,6 +281,34 @@ class MazeGenerator():
                 f.write(self.path + '\n')
         except OSError as e:
             raise ValueError(f"Cannot write output file: {e}")
+
+    def animate(self, x, y):
+        self.frames.append([x, y, self.grid[y][x]])
+
+    def animate_save_file(self):
+        try:
+            with open("animation.txt", "w") as f:
+                for frame in self.frames:
+                    f.write(f"{frame[0]},{frame[1]},{frame[2]}\n")
+        except OSError as e:
+            raise ValueError(f"Cannot write output file: {e}")
+    
+    def animate_short_path(self):
+        x, y = self.config.entry
+
+        MOVE = {
+            'N': (0, -1),
+            'E': (1, 0),
+            'S': (0, 1),
+            'W': (-1, 0)
+        }
+
+        for move in self.path:
+            dx, dy = MOVE[move]
+            x += dx
+            y += dy
+
+            self.frames.append([x, y, -2])
 
     # Constants
     NORTH = 0x1
