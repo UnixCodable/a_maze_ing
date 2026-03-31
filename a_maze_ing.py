@@ -15,8 +15,9 @@ def main() -> None:
         config = MazeConfig(**raw)          # → validated config
         
         gen = MazeGenerator(config)         # set up
-        gen.generate()      # build maze
-        gen.save()                          # write file
+        gen.generate()                      # build maze
+        gen.save()
+        gen.animate_save_file()                       # write file
         render()
         # display will be: MazeDisplay(gen).show()  ← later
         

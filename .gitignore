@@ -1,2 +1,6 @@
+<<<<<<< HEAD
 .vscode
 .vscode/*
+=======
+__pychache__/
+>>>>>>> origin/rai_test
