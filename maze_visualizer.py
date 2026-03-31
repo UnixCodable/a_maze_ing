@@ -6,7 +6,7 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/03/27 17:04:43 by lbordana        #+#    #+#               #
-#  Updated: 2026/03/31 18:28:20 by lbordana        ###   ########.fr        #
+#  Updated: 2026/04/01 01:40:30 by lbordana        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -153,13 +153,12 @@ class MazeFront(MazeInterface):
         self.historic = []
         self.theme = f"themes/{theme}"
         self.background_texture = self.gen_array('background_texture.png')
-        self.wall_texture = self.gen_array('wall_texture.png', True)
-        self.path_texture = self.gen_array('path_texture.png', True)
+        self.wall = self.gen_array('wall.png', True)
+        self.path = self.gen_array('path.png', True)
         self.logo_texture = self.gen_array('logo.png')
         self.entrance_texture = self.gen_array('entrance.png', True)
         self.exit_texture = self.gen_array('exit.png', True)
-        self.res_texture = self.gen_array('resolution_texture.png', True)
-        self.wall_path = self.gen_array('path_texture.png', True, 'wall_texture.png')
+        self.res_path = self.gen_array('resolution_path.png', True)
         self.tile = self.create_mlx_image(self.tile_size * 3,
                                           self.tile_size * 3)
         self.mask = None
@@ -175,9 +174,6 @@ class MazeFront(MazeInterface):
         self.snap = self.create_mlx_image(self.base_width, self.base_height)
         self.snap_buf = (np.frombuffer(self.snap.data, dtype=np.uint8).
                          reshape(self.snapshot.shape))
-        self.path = self.create_mlx_image(self.base_width, self.base_height)
-        self.path_buf = (np.frombuffer(self.path.data, dtype=np.uint8).
-                         reshape(self.res.shape))
         self.snap_buf.fill(0)
         self.last_bin = '1111'
         self.generator = None
@@ -226,18 +222,18 @@ class MazeFront(MazeInterface):
     def mask_creator(self) -> None:
         tile = self.tile_size
         self.mask = np.zeros((tile * 3, tile * 3, 4), dtype=np.uint8)
-        self.mask[0:tile, tile:tile*2] = self.wall_texture
-        self.mask[tile:tile*2, tile*2:tile*3] = self.wall_texture
-        self.mask[tile*2:tile*3, tile:tile*2] = self.wall_texture
-        self.mask[tile:tile*2, 0:tile] = self.wall_texture
-        self.mask[tile:tile*2, tile:tile*2] = self.path_texture
+        self.mask[0:tile, tile:tile*2] = self.wall
+        self.mask[tile:tile*2, tile*2:tile*3] = self.wall
+        self.mask[tile*2:tile*3, tile:tile*2] = self.wall
+        self.mask[tile:tile*2, 0:tile] = self.wall
+        self.mask[tile:tile*2, tile:tile*2] = self.path
 
     def generate_floor(self) -> None:
         floor = np.zeros((self.base_height, self.base_width, 4),
                          dtype=np.uint8)
         for w in range(0, self.base_width, self.tile_size):
             for h in range(0, self.base_height, self.tile_size):
-                floor[h:h+self.tile_size, w:w+self.tile_size] = self.wall_path
+                floor[h:h+self.tile_size, w:w+self.tile_size] = self.wall
         self.image_to_memory(floor, self.floor)
         self.put_to_screen(self.floor.id,
                            self.pos_x - self.view_port_w,
@@ -255,13 +251,13 @@ class MazeFront(MazeInterface):
                       d[1] * (tile * 2))
             mask = self.mask.copy()
             if int(binary[-1]) == 0:
-                mask[0:tile, tile:tile*2] = self.path_texture
+                mask[0:tile, tile:tile*2] = self.path
             if int(binary[-2]) == 0:
-                mask[tile:tile*2, tile*2:tile*3] = self.path_texture
+                mask[tile:tile*2, tile*2:tile*3] = self.path
             if int(binary[-3]) == 0:
-                mask[tile*2:tile*3, tile:tile*2] = self.path_texture
+                mask[tile*2:tile*3, tile:tile*2] = self.path
             if int(binary[-4]) == 0:
-                mask[tile:tile*2, 0:tile] = self.path_texture
+                mask[tile:tile*2, 0:tile] = self.path
             self.snap_buf[p_snap[1]:p_snap[1] + (tile * 3),
                           p_snap[0]:p_snap[0] + (tile * 3)] = mask
             yield
@@ -281,7 +277,7 @@ class MazeFront(MazeInterface):
                 background[:, :, 3] = 255
         self.image_to_memory(background, self.background)
         self.put_to_screen(self.background.id, 0, 0)
-        self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITE, self.background.id)
+        self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITABLE, self.background.id)
 
     def generate_logo(self) -> None:
         width = self.logo_texture.shape[1]
@@ -297,9 +293,9 @@ class MazeFront(MazeInterface):
                    (self.maze_entry[1] * 2 + 1) * tile)
         p_exit = ((self.maze_exit[0] * 2 + 1) * tile,
                   (self.maze_exit[1] * 2 + 1) * tile)
-        self.path_buf[p_entry[1]:p_entry[1] + tile,
+        self.snap_buf[p_entry[1]:p_entry[1] + tile,
                       p_entry[0]:p_entry[0] + tile] = self.entrance_texture
-        self.path_buf[p_exit[1]:p_exit[1] + tile,
+        self.snap_buf[p_exit[1]:p_exit[1] + tile,
                       p_exit[0]:p_exit[0] + tile] = self.exit_texture
 
     def generate_resolution(self, resolution_path: str) -> None:
@@ -310,46 +306,43 @@ class MazeFront(MazeInterface):
             if direction == 'N':
                 for _ in range(2):
                     path[0] -= tile
-                    self.path_buf[path[0]:path[0] + tile,
-                                  path[1]:path[1] + tile] = self.res_texture
+                    self.snap_buf[path[0]:path[0] + tile,
+                                  path[1]:path[1] + tile] = self.res_path
             if direction == 'E':
                 for _ in range(2):
                     path[1] += tile
-                    self.path_buf[path[0]:path[0] + tile,
-                                  path[1]:path[1] + tile] = self.res_texture
+                    self.snap_buf[path[0]:path[0] + tile,
+                                  path[1]:path[1] + tile] = self.res_path
             if direction == 'S':
                 for _ in range(2):
                     path[0] += tile
-                    self.path_buf[path[0]:path[0] + tile,
-                                  path[1]:path[1] + tile] = self.res_texture
+                    self.snap_buf[path[0]:path[0] + tile,
+                                  path[1]:path[1] + tile] = self.res_path
             if direction == 'W':
                 for _ in range(2):
                     path[1] -= tile
-                    self.path_buf[path[0]:path[0] + tile,
-                                  path[1]:path[1] + tile] = self.res_texture
+                    self.snap_buf[path[0]:path[0] + tile,
+                                  path[1]:path[1] + tile] = self.res_path
         if resolution_path[-1] == 'N':
             path[0] -= tile
-            self.path_buf[path[0]:path[0] + tile,
-                          path[1]:path[1] + tile] = self.res_texture
+            self.snap_buf[path[0]:path[0] + tile,
+                          path[1]:path[1] + tile] = self.res_path
         if resolution_path[-1] == 'E':
             path[1] += tile
-            self.path_buf[path[0]:path[0] + tile,
-                          path[1]:path[1] + tile] = self.res_texture
+            self.snap_buf[path[0]:path[0] + tile,
+                          path[1]:path[1] + tile] = self.res_path
         if resolution_path[-1] == 'S':
             path[0] += tile
-            self.path_buf[path[0]:path[0] + tile,
-                          path[1]:path[1] + tile] = self.res_texture
+            self.snap_buf[path[0]:path[0] + tile,
+                          path[1]:path[1] + tile] = self.res_path
         if resolution_path[-1] == 'W':
             path[1] -= tile
-            self.path_buf[path[0]:path[0] + tile,
-                          path[1]:path[1] + tile] = self.res_texture 
+            self.snap_buf[path[0]:path[0] + tile,
+                          path[1]:path[1] + tile] = self.res_path 
 
-    def gen_array(self, filename: str, resizing: bool = False,
-                  filename_2: str = None):
+    def gen_array(self, filename: str, resizing: bool = False):
         image = cv2.imread(f"{self.theme}/{filename}",
                            flags=cv2.IMREAD_UNCHANGED)
-        if filename_2 is not None:
-            image = cv2.merge()
         image_argb = cv2.cvtColor(image, code=cv2.COLOR_BGR2BGRA)
         if resizing is True:
             image_scale = cv2.resize(image_argb, (self.tile_size,
@@ -401,7 +394,7 @@ class Controler(MazeFront):
             except IndexError:
                 self.__init__(None, theme[0], False)
             self.mlx_clear_window(self.mlx, self.win)
-            self.generator = self.generate_walls(parsed_data())
+            self.generator = self.generate_walls(parsed_data()[0])
             self.generate_background()
             self.generate_logo()
             self.generate_floor()
@@ -458,9 +451,6 @@ class Controler(MazeFront):
                 self.put_to_screen(self.snap.id,
                                    self.pos_x - self.view_port_w,
                                    self.pos_y - self.view_port_h)
-                self.put_to_screen(self.path.id,
-                                   self.pos_x - self.view_port_w,
-                                   self.pos_y - self.view_port_h)
         if key_num == 65363 or key_num == 100:
             if self.view_port_w < self.base_width:
                 # for _ in range(20):
@@ -475,9 +465,6 @@ class Controler(MazeFront):
                                    self.pos_x - self.view_port_w,
                                    self.pos_y - self.view_port_h)
                 self.put_to_screen(self.snap.id,
-                                   self.pos_x - self.view_port_w,
-                                   self.pos_y - self.view_port_h)
-                self.put_to_screen(self.path.id,
                                    self.pos_x - self.view_port_w,
                                    self.pos_y - self.view_port_h)
         if key_num == 65362 or key_num == 119:
@@ -496,9 +483,6 @@ class Controler(MazeFront):
                 self.put_to_screen(self.snap.id,
                                    self.pos_x - self.view_port_w,
                                    self.pos_y - self.view_port_h)
-                self.put_to_screen(self.path.id,
-                                   self.pos_x - self.view_port_w,
-                                   self.pos_y - self.view_port_h)
         if key_num == 65364 or key_num == 115:
             if self.view_port_h < self.base_height:
                 self.view_port_h += 200
@@ -514,9 +498,7 @@ class Controler(MazeFront):
                 self.put_to_screen(self.snap.id,
                                    self.pos_x - self.view_port_w,
                                    self.pos_y - self.view_port_h)
-                self.put_to_screen(self.path.id,
-                                   self.pos_x - self.view_port_w,
-                                   self.pos_y - self.view_port_h)
+
     def mouse_commands(self, mouse_num, x, y, *a):
         logo_width = self.logo_texture.shape[1]
         if mouse_num == 4:
@@ -535,9 +517,6 @@ class Controler(MazeFront):
                 self.put_to_screen(self.snap.id,
                                    self.pos_x - self.view_port_w,
                                    self.pos_y - self.view_port_h)
-                self.put_to_screen(self.path.id,
-                                   self.pos_x - self.view_port_w,
-                                   self.pos_y - self.view_port_h)
         if mouse_num == 5:
             if self.view_port_h < self.base_height:
                 self.view_port_h += 60
@@ -551,9 +530,6 @@ class Controler(MazeFront):
                                    self.pos_x - self.view_port_w,
                                    self.pos_y - self.view_port_h)
                 self.put_to_screen(self.snap.id,
-                                   self.pos_x - self.view_port_w,
-                                   self.pos_y - self.view_port_h)
-                self.put_to_screen(self.path.id,
                                    self.pos_x - self.view_port_w,
                                    self.pos_y - self.view_port_h)
 
@@ -573,9 +549,6 @@ class Controler(MazeFront):
         self.put_to_screen(self.snap.id,
                            self.pos_x - self.view_port_w,
                            self.pos_y - self.view_port_h)
-        self.put_to_screen(self.path.id,
-                                   self.pos_x - self.view_port_w,
-                                   self.pos_y - self.view_port_h)
         # end = time()
         # print(end - start)
 
@@ -603,7 +576,7 @@ def parsed_data():
 
 def render():
     config = read_config("config.txt")
-    m = Controler(config, 'mario')
+    m = Controler(config)
     m.generator = m.generate_walls(parsed_data()[0])
     m.mlx_hook(m.win, 33, 0, Controler.close_window, m)
     m.generate_background()
