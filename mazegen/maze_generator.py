@@ -274,8 +274,8 @@ class MazeGenerator():
         self._run_dfs()
         self._fix_open_areas()
         
-        self._open_border(*self.config.entry)
-        self._open_border(*self.config.exit)
+        # self._open_border(*self.config.entry)
+        # self._open_border(*self.config.exit)
         
         self._solve()
     
