@@ -289,7 +289,7 @@ class MazeGenerator():
         try:
             with open("animation.txt", "w") as f:
                 for frame in self.frames:
-                    f.write(f"{frame[0]},{frame[1]},{frame[2]}\n")
+                    f.write(f"[{frame[0]}, {frame[1]}, {frame[2]}]\n")
         except OSError as e:
             raise ValueError(f"Cannot write output file: {e}")
     
