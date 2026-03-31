@@ -6,7 +6,7 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/03/27 17:04:43 by lbordana        #+#    #+#               #
-#  Updated: 2026/03/30 19:59:06 by lbordana        ###   ########.fr        #
+#  Updated: 2026/03/31 08:36:18 by lbordana        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -60,6 +60,8 @@ class MazeInterface(Mlx):
         self.mlx = self.mlx_init()
         self.maze_width: int = int(config.get('width', 0))
         self.maze_height: int = int(config.get('height', 0))
+        self.maze_entry: tuple = tuple(config.get('entry', 0))
+        self.maze_exit: tuple = tuple(config.get('exit', 0))
         self.tile_size = int(32 * self.scale_tile_size())
         self.base_width = (self.maze_width * 2 + 1) * self.tile_size
         self.base_height = (self.maze_height * 2 + 1) * self.tile_size
@@ -154,6 +156,8 @@ class MazeFront(MazeInterface):
         self.wall_texture = self.gen_array('wall_texture.png', True)
         self.path_texture = self.gen_array('path_texture.png', True)
         self.logo_texture = self.gen_array('logo.png')
+        self.entrance_texture = self.gen_array('entrance.png', True)
+        self.exit_texture = self.gen_array('exit.png', True)
         self.res_texture = self.gen_array('resolution_texture.png', True)
         self.wall_path = \
             np.where(self.wall_texture == 0, self.path_texture,
@@ -277,7 +281,7 @@ class MazeFront(MazeInterface):
                 background[:, :, 3] = 255
         self.image_to_memory(background, self.background)
         self.put_to_screen(self.background.id, 0, 0)
-        self.mlx_sync(self.mlx, self.SYNC_WIN_COMPLETED, self.win)
+        self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITABLE, self.background.id)
 
     def generate_logo(self) -> None:
         width = self.logo_texture.shape[1]
@@ -286,10 +290,21 @@ class MazeFront(MazeInterface):
                            int((self.win_width / 2) -
                                (width / 2)) - self.view_port_w,
                            100 - self.view_port_h)
-        self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITABLE, self.logo.id)
+
+    def generate_entrance_exit(self):
+        tile = self.tile_size
+        p_entry = ((self.maze_entry[0] * 2 + 1) * tile,
+                   (self.maze_entry[1] * 2 + 1) * tile)
+        p_exit = ((self.maze_exit[0] * 2 + 1) * tile,
+                  (self.maze_exit[1] * 2 + 1) * tile)
+        self.snap_buf[p_entry[0]:p_entry[0] + tile,
+                      p_entry[1]:p_entry[1] + tile] = self.entrance_texture
+        self.snap_buf[p_exit[0]:p_exit[0] + tile,
+                      p_exit[1]:p_exit[1] + tile] = self.exit_texture
 
     def generate_resolution(self, path: list) -> None:
-        pass
+        for directions in path:
+            pass
 
     def gen_array(self, filename: str, resizing: bool = False):
         image = cv2.imread(f"{self.theme}/{filename}",
@@ -349,12 +364,12 @@ class Controler(MazeFront):
             self.generate_logo()
             self.generate_floor()
             self.mask_creator()
-            self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITABLE, self.floor.id)
-            self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITABLE, self.logo.id)
-            self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITABLE, self.snap.id)
-            self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITABLE, self.tile.id)
-            self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITABLE,
-                          self.background.id)
+            # self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITABLE, self.floor.id)
+            # self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITABLE, self.logo.id)
+            # self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITABLE, self.snap.id)
+            # self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITABLE, self.tile.id)
+            # self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITABLE,
+            #               self.background.id)
         if key_num == 61:
             if self.speed < 500:
                 if self.speed < 5:
@@ -499,6 +514,7 @@ class Controler(MazeFront):
                 next(self.generator)
                 # sleep(0.5)
         except StopIteration:
+            self.generate_entrance_exit()
             self.running_state = False
         self.put_to_screen(self.snap.id,
                            self.pos_x - self.view_port_w,
