@@ -6,7 +6,7 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/03/27 17:04:43 by lbordana        #+#    #+#               #
-#  Updated: 2026/04/01 01:40:30 by lbordana        ###   ########.fr        #
+#  Updated: 2026/04/01 02:16:18 by lbordana        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -15,6 +15,7 @@ from PIL import Image, ImageDraw, ImageFont
 from PIL.Image import Image as PillowImage
 from typing import Any
 import numpy as np
+import json
 import cv2
 # from time import sleep, time
 from typing import Generator
@@ -394,7 +395,7 @@ class Controler(MazeFront):
             except IndexError:
                 self.__init__(None, theme[0], False)
             self.mlx_clear_window(self.mlx, self.win)
-            self.generator = self.generate_walls(parsed_data()[0])
+            self.generator = self.generate_walls(parsed_data()[2])
             self.generate_background()
             self.generate_logo()
             self.generate_floor()
@@ -571,13 +572,24 @@ def parsed_data():
         for nb_d, d in enumerate(to_parse):
             for nb_char, char in enumerate(d[:-1]):
                 parsed.append([nb_char, nb_d, d[nb_char]])
-    return (parsed, directions)
+    with open('animation.txt', 'r') as file:
+        data = file.readlines()
+        hex = '0123456789ABCDEF'
+        parse = []
+        animation = []
+        for d in data:
+            parse.append(json.loads(d.strip()))
+        for d in parse:
+            if d[2] > 0:
+                d[2] = hex[d[2]]
+                animation.append(d)
+    return (parsed, directions, animation)
 
 
 def render():
     config = read_config("config.txt")
     m = Controler(config)
-    m.generator = m.generate_walls(parsed_data()[0])
+    m.generator = m.generate_walls(parsed_data()[2])
     m.mlx_hook(m.win, 33, 0, Controler.close_window, m)
     m.generate_background()
     m.generate_logo()
