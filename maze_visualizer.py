@@ -6,7 +6,7 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/03/27 17:04:43 by lbordana        #+#    #+#               #
-#  Updated: 2026/04/01 19:54:52 by lbordana        ###   ########.fr        #
+#  Updated: 2026/04/01 20:00:22 by lbordana        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -284,7 +284,7 @@ class MazeFront(MazeInterface):
                 background[:, :, 3] = 255
         self.image_to_memory(background, self.background)
         self.put_to_screen(self.background.id, 0, 0)
-        self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITE, self.background.id)
+        self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITABLE, self.background.id)
 
     def generate_logo(self) -> None:
         width = self.logo_texture.shape[1]
