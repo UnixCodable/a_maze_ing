@@ -6,7 +6,7 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/03/27 17:04:43 by lbordana        #+#    #+#               #
-#  Updated: 2026/04/01 02:16:18 by lbordana        ###   ########.fr        #
+#  Updated: 2026/04/01 19:54:52 by lbordana        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -17,7 +17,9 @@ from typing import Any
 import numpy as np
 import json
 import cv2
+import json
 # from time import sleep, time
+# from a_maze_ing import main as a_maze_ing
 from typing import Generator
 from config_parser import read_config
 
@@ -133,6 +135,10 @@ class MazeInterface(Mlx):
             scale = 0.4
         if self.maze_height > 150 or self.maze_width > 200:
             scale = 0.2
+        if self.maze_height > 400 or self.maze_width > 500:
+            scale = 0.12
+        if self.maze_height > 900 or self.maze_width > 1000:
+            scale = 0.08
         return scale
 
     def get_window_size(self):
@@ -278,7 +284,7 @@ class MazeFront(MazeInterface):
                 background[:, :, 3] = 255
         self.image_to_memory(background, self.background)
         self.put_to_screen(self.background.id, 0, 0)
-        self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITABLE, self.background.id)
+        self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITE, self.background.id)
 
     def generate_logo(self) -> None:
         width = self.logo_texture.shape[1]
@@ -556,6 +562,7 @@ class Controler(MazeFront):
 
 def parsed_data():
     parsed = []
+    animation = []
     with open("maze.txt", 'r') as file:
         data = file.readlines()
         nb = 0
@@ -572,14 +579,13 @@ def parsed_data():
         for nb_d, d in enumerate(to_parse):
             for nb_char, char in enumerate(d[:-1]):
                 parsed.append([nb_char, nb_d, d[nb_char]])
-    with open('animation.txt', 'r') as file:
+    with open("animation.txt", "r") as file:
         data = file.readlines()
+        to_parse = []
         hex = '0123456789ABCDEF'
-        parse = []
-        animation = []
         for d in data:
-            parse.append(json.loads(d.strip()))
-        for d in parse:
+            to_parse.append(json.loads(d.strip()))
+        for d in to_parse:
             if d[2] > 0:
                 d[2] = hex[d[2]]
                 animation.append(d)
