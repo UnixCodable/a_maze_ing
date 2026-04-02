@@ -6,7 +6,7 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/04/02 02:46:39 by lbordana        #+#    #+#               #
-#  Updated: 2026/04/02 12:45:58 by lbordana        ###   ########.fr        #
+#  Updated: 2026/04/02 14:48:35 by lbordana        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -36,6 +36,7 @@ class MazeHunt():
     def first_point(self) -> tuple:
         position = (randint(0, self.height - 1), randint(0, self.width - 1))
         self.visited_cells[position[0]][position[1]] = 1
+        print(self.visited_cells)
         return position
 
     def fullfill_zeros(self):
