@@ -6,7 +6,7 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/04/02 02:46:39 by lbordana        #+#    #+#               #
-#  Updated: 2026/04/02 03:40:12 by lbordana        ###   ########.fr        #
+#  Updated: 2026/04/02 12:45:58 by lbordana        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -32,8 +32,6 @@ class MazeHunt():
             if path_direction == 1:
                 if self.validate(height - 1, width) is True:
                     self.visited_cells[height - 1][width] = 1
-                    
-        
 
     def first_point(self) -> tuple:
         position = (randint(0, self.height - 1), randint(0, self.width - 1))
@@ -48,4 +46,4 @@ class MazeHunt():
 if __name__ == '__main__':
     maze = MazeHunt()
     maze.fullfill_zeros()
-    maze.starting_point()
+    maze.first_point()
