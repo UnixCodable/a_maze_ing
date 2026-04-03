@@ -79,9 +79,9 @@ def read_config(filename: str) -> dict:
 
 
 if __name__ == "__main__":
-    di = read_config("default_config.txt")
+    di = read_config("config.txt")
     try:
         config = MazeConfig(**di)
-        print(config)
+        print(config.perfect)
     except Exception as e:
         print(f"{e}")

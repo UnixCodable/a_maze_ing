@@ -225,10 +225,66 @@ class MazeGenerator():
                 if (nx, ny) not in visited:
                     visited.add((nx, ny))
                     queue.append((nx, ny, path + letter))
-                    self.frames.append([nx, ny, -1])
+                    self.animate(x, y)
         
         self.path = ""  # no solution found
     
+    def _add_loops(self) -> None:
+
+        protected: set[tuple[int, int]] = set(self.pattern_cells)
+
+        entry = self.config.entry    # e.g. (0, 0)
+        exit_ = self.config.exit     # e.g. (19, 14)
+
+        # Protect entry and exit cells directly
+        protected.add(entry)
+        protected.add(exit_)
+
+        # Protect each immediate neighbour of entry and exit
+        # A neighbour is any in-bounds cell adjacent to them
+        for cell in (entry, exit_):
+            cx, cy = cell
+            for direction in (self.NORTH, self.SOUTH,
+                              self.EAST, self.WEST):
+                dx, dy = self.DELTA[direction]
+                nx, ny = cx + dx, cy + dy
+
+                if (0 <= nx < self.width
+                        and 0 <= ny < self.height):
+                    protected.add((nx, ny))
+
+        candidates: list[tuple[int, int, int]] = []
+
+        for y in range(self.height):
+            for x in range(self.width):
+
+                if (x, y) in protected:
+                    continue
+
+                for direction in (self.EAST, self.SOUTH):
+                    dx, dy = self.DELTA[direction]
+                    nx, ny = x + dx, y + dy
+
+                    if not (0 <= nx < self.width
+                            and 0 <= ny < self.height):
+                        continue
+
+                    # neighbour must also not be protected
+                    if (nx, ny) in protected:
+                        continue
+
+                    # wall must currently be CLOSED
+                    if self.grid[y][x] & direction:
+                        candidates.append((x, y, direction))
+
+        # ── Shuffle and remove walls
+        self.rng.shuffle(candidates)
+
+        loop_count = int(len(candidates) * .1)
+
+        for x, y, direction in candidates[:loop_count]:
+            self._carve_wall(x, y, direction)
+
     def generate(self) -> None:
         """
         PUBLIC METHOD — call this to build the maze.
@@ -254,6 +310,8 @@ class MazeGenerator():
         
         self._run_dfs()
         self._fix_open_areas()
+        if not self.config.perfect:
+            self._add_loops
         
         self._solve()
         self.animate_short_path()
@@ -308,7 +366,7 @@ class MazeGenerator():
             x += dx
             y += dy
 
-            self.frames.append([x, y, -2])
+            self.animate(x, y)
 
     # Constants
     NORTH = 0x1
