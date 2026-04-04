@@ -1,0 +1,9 @@
+[build-system]
+requires = ["setuptools>=61.0", "build"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mazegen-yourlogin" # Must start with mazegen- [cite: 202]
+version = "1.0.0"
+description = "Reusable maze generation module"
+requires-python = ">=3.10" # Must match project requirements [cite: 72]
