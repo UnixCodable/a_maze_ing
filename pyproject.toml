@@ -21,3 +21,4 @@ dev = [
 # ── Where to find the package source ─────────────────────
 [tool.setuptools.packages.find]
 where = ["src"]
+

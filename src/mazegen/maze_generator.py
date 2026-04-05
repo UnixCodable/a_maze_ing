@@ -340,7 +340,7 @@ class MazeGenerator():
         except OSError as e:
             raise ValueError(f"Cannot write output file: {e}")
 
-    def animate(self, x, y):
+    def animate(self, x, y) -> None:
         self.frames.append([x, y, self.grid[y][x]])
 
     def animate_save_file(self):
