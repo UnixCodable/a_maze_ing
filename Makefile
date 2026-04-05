@@ -1,33 +1,40 @@
-# Variables
-PYTHON = python3
-SCRIPT = a_maze_ing.py
-CONFIG = config.txt
+.PHONY: install run debug clean lint lint-strict build
 
+# Install project dependencies
 install:
-	$(PYTHON) -m pip install .
+	pip install flake8 mypy pydantic
+	pip install -e .
 
+# Run the main program
 run:
-	$(PYTHON) $(SCRIPT) $(CONFIG)
+	python3 a_maze_ing.py config.txt
 
+# Debug mode
 debug:
-	$(PYTHON) -m pdb $(SCRIPT) $(CONFIG)
+	python3 -m pdb a_maze_ing.py config.txt
 
+# Clean temporary files
 clean:
-	rm -rf `find . -type d -name "__pycache__"`
-	rm -rf .mypy_cache
-	rm -rf build/ dist/ *.egg-info
+	find . -type d -name __pycache__ -exec rm -rf {} +
+	find . -type d -name .mypy_cache -exec rm -rf {} +
+	find . -type d -name *.egg-info -exec rm -rf {} +
+	find . -type d -name build -exec rm -rf {} +
+	find . -type d -name dist -exec rm -rf {} +
 
-# Mandatory lint flags 
+# Lint (mandatory flags from subject)
 lint:
 	flake8 .
-	mypy --warn-return-any --warn-unused-ignores --ignore-missing-imports \
-		 --disallow-untyped-defs --check-untyped-defs .
+	mypy . --warn-return-any --warn-unused-ignores \
+		--ignore-missing-imports \
+		--disallow-untyped-defs \
+		--check-untyped-defs
 
-# Optional strict checking [cite: 95]
+# Lint strict (optional)
 lint-strict:
 	flake8 .
-	mypy --strict .
+	mypy . --strict
 
-# Build the reusable package for evaluation 
-package:
-	$(PYTHON) -m build
+# Build the pip package
+build:
+	pip install build
+	python -m build

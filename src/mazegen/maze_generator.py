@@ -177,58 +177,58 @@ class MazeGenerator():
         # Add wall on both sides
         self.grid[cy][cx] |= direction
         self.grid[ny][nx] |= self.OPPOSITE[direction]
-    
+
     def _solve(self) -> None:
         """
         BFS from entry to exit to find the shortest valid path.
         A move is valid only if the wall between two cells is OPEN (bit = 0).
-        
+
         Stores the result as a string in self.path e.g. "NNEESW".
         Sets self.path = "" if no solution exists
         (shouldn't happen in valid maze).
         """
         from collections import deque
-        
+
         DIR_LETTER = {
             self.NORTH: 'N',
             self.EAST:  'E',
             self.SOUTH: 'S',
             self.WEST:  'W',
         }
-        
+
         ex, ey = self.config.entry
         exit_ = self.config.exit
-        
+
         # Queue stores (x, y, path_string_so_far)
         queue: deque[tuple[int, int, str]] = deque()
         queue.append((ex, ey, ""))
         visited: set[tuple[int, int]] = {(ex, ey)}
-        
+
         while queue:
             x, y, path = queue.popleft()
-            
+
             if (x, y) == exit_:
                 self.path = path
                 return
-            
+
             for direction, letter in DIR_LETTER.items():
                 # Wall is CLOSED if the bit is SET — can't pass
                 if self.grid[y][x] & direction:
                     continue
-                
+
                 dx, dy = self.DELTA[direction]
                 nx, ny = x + dx, y + dy
-                
+
                 if not (0 <= nx < self.width and 0 <= ny < self.height):
                     continue
-                
+
                 if (nx, ny) not in visited:
                     visited.add((nx, ny))
                     queue.append((nx, ny, path + letter))
                     self.animate(x, y)
-        
+
         self.path = ""  # no solution found
-    
+
     def _add_loops(self) -> None:
 
         protected: set[tuple[int, int]] = set(self.pattern_cells)
@@ -289,7 +289,7 @@ class MazeGenerator():
         """
         PUBLIC METHOD — call this to build the maze.
         Calls all private methods in the correct order:
-        
+
         1. _init_grid        → blank grid, all walls closed
         2. _get_42_cells     → figure out where "42" goes
         3. _lock_42_cells    → freeze those cells (DFS will skip them)
@@ -299,7 +299,7 @@ class MazeGenerator():
         7. _solve            → find shortest path, store in self.path
         """
         self._init_grid()
-        
+
         pattern = self._get_42_cells()
         if pattern is None:
             print("Error: maze too small to display the '42' pattern.")
@@ -307,15 +307,15 @@ class MazeGenerator():
         else:
             self.pattern_cells = pattern
             self._lock_42_cells()
-        
+
         self._run_dfs()
         self._fix_open_areas()
         if not self.config.perfect:
             self._add_loops
-        
+
         self._solve()
         self.animate_short_path()
-    
+
     def save(self) -> None:
         """
         PUBLIC METHOD — call after generate() to write the output file.
@@ -328,7 +328,7 @@ class MazeGenerator():
         """
         ex, ey = self.config.entry
         exit_ = self.config.exit
-        
+
         try:
             with open(self.config.output_file, 'w') as f:
                 for row in self.grid:
@@ -350,7 +350,7 @@ class MazeGenerator():
                     f.write(f"[{frame[0]}, {frame[1]}, {frame[2]}]\n")
         except OSError as e:
             raise ValueError(f"Cannot write output file: {e}")
-    
+
     def animate_short_path(self):
         x, y = self.config.entry
 
@@ -373,14 +373,14 @@ class MazeGenerator():
     EAST = 0x2
     SOUTH = 0x4
     WEST = 0x8
-    
+
     DELTA = {
         NORTH: (0, -1),
         EAST: (1, 0),
         SOUTH: (0, 1),
         WEST: (-1, 0),
     }
-    
+
     OPPOSITE = {
         NORTH: SOUTH,
         EAST: WEST,

@@ -1,9 +1,23 @@
+# ── How to build the package ──────────────────────────────
 [build-system]
-requires = ["setuptools>=61.0", "build"]
+requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
+# ── Package metadata ──────────────────────────────────────
 [project]
-name = "mazegen-yourlogin" # Must start with mazegen- [cite: 202]
+name = "mazegen"
 version = "1.0.0"
-description = "Reusable maze generation module"
-requires-python = ">=3.10" # Must match project requirements [cite: 72]
+description = "A reusable maze generator module for the A-Maze-ing project"
+requires-python = ">=3.10"
+dependencies = []
+
+# ── Optional dev dependencies ─────────────────────────────
+[project.optional-dependencies]
+dev = [
+    "flake8",
+    "mypy",
+]
+
+# ── Where to find the package source ─────────────────────
+[tool.setuptools.packages.find]
+where = ["src"]
