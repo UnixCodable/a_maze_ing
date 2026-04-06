@@ -15,7 +15,7 @@ class MazeGenerator():
         self.pattern_cells: set[tuple[int, int]] = set()
 
         self.path: str = ""
-        self.frames = []
+        self.frames: list[list[int]] = []
 
     def _init_grid(self) -> None:
 
@@ -74,6 +74,15 @@ class MazeGenerator():
     def _lock_42_cells(self) -> None:
         for (x, y) in self.pattern_cells:
             self.grid[y][x] = 0xF
+
+    def _get_pattern_bounds(self) -> tuple[int, int, int, int]:
+
+        if not self.pattern_cells:
+            return (0, 0, 0, 0)
+
+        xs = [x for x, y in self.pattern_cells]
+        ys = [y for x, y in self.pattern_cells]
+        return (min(xs), min(ys), max(xs), max(ys))
 
     def _run_dfs(self) -> None:
 
@@ -308,6 +317,24 @@ class MazeGenerator():
             self.pattern_cells = pattern
             self._lock_42_cells()
 
+        if self.pattern_cells:
+            bounds = self._get_pattern_bounds()
+            sx, sy, ex, ey = bounds
+
+            if self.config.entry in self.pattern_cells:
+                raise ValueError(
+                    f"ENTRY {self.config.entry} is inside the '42' pattern "
+                    f"(columns {sx}-{ex}, rows {sy}-{ey}). "
+                    f"Move ENTRY or change SEED."
+                )
+
+            if self.config.exit in self.pattern_cells:
+                raise ValueError(
+                    f"EXIT {self.config.exit} is inside the '42' pattern "
+                    f"(columns {sx}-{ex}, rows {sy}-{ey}). "
+                    f"Move EXIT or change SEED."
+                )
+
         self._run_dfs()
         self._fix_open_areas()
         if not self.config.perfect:
@@ -340,10 +367,10 @@ class MazeGenerator():
         except OSError as e:
             raise ValueError(f"Cannot write output file: {e}")
 
-    def animate(self, x, y) -> None:
+    def animate(self, x: int, y: int) -> None:
         self.frames.append([x, y, self.grid[y][x]])
 
-    def animate_save_file(self):
+    def animate_save_file(self) -> None:
         try:
             with open("animation.txt", "w") as f:
                 for frame in self.frames:
@@ -351,7 +378,7 @@ class MazeGenerator():
         except OSError as e:
             raise ValueError(f"Cannot write output file: {e}")
 
-    def animate_short_path(self):
+    def animate_short_path(self) -> None:
         x, y = self.config.entry
 
         MOVE = {

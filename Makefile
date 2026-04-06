@@ -2,8 +2,8 @@
 
 # Install project dependencies
 install:
-	pip install flake8 mypy pydantic
-	pip install -e .
+	python3 -m pip install flake8 mypy pydantic
+	python3 -m pip install -e .
 
 # Run the main program
 run:
@@ -36,5 +36,5 @@ lint-strict:
 
 # Build the pip package
 build:
-	pip install build
-	python -m build
+	python3 -m pip install build
+	python3 -m build
