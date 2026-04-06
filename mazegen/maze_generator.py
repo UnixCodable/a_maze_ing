@@ -113,6 +113,46 @@ class MazeGenerator():
             if not moved:
                 stack.pop()   # backtrack
 
+    def _run_hunt_and_kill(self) -> None:
+
+        start_x, start_y = self.config.entry
+
+        visited: set[tuple[int, int]] = set()
+        visited.add((start_x, start_y))
+
+        # Also mark pattern cells as visited so DFS never enters them
+        visited.update(self.pattern_cells)
+
+        while True:
+            directions = [self.NORTH, self.SOUTH, self.EAST, self.WEST]
+            self.rng.shuffle(directions)
+
+            moved = False
+            for direction in directions:
+                dx, dy = self.DELTA[direction]
+                nx, ny = x + dx, y + dy
+
+                # Check bounds + not visited
+                if (0 <= nx < self.width
+                        and 0 <= ny < self.height
+                        and (nx, ny) not in visited):
+
+                    #  calls the method above
+                    self._carve_wall(x, y, direction)
+                    visited.add((nx, ny))
+                    stack.append((nx, ny))
+                    self.animate(nx, ny)
+                    moved = True
+                    break
+
+            if not moved:
+                for x in range(self.config.height):
+                    for y in range(self.config.width):
+                        if ((x, y) not in visited and (x + 1, y) or (x, y + 1)
+                            in visited):
+                            continue
+
+
     def _fix_open_areas(self) -> None:
         """
         The subject forbids corridors wider than 2 cells (no 3x3 open area).
