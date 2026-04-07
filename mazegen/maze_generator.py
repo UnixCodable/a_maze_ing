@@ -152,7 +152,7 @@ class MazeGenerator():
                 for y_pos in range(self.height):
                     for x_pos in range(self.width):
 
-                        if (x_pos, y_pos) not in visited:
+                        if (x_pos, y_pos) not in visited + stack:
                             for direction in directions:
                                 dx, dy = self.DELTA[direction]
                                 nx, ny = x_pos + dx, y_pos + dy
