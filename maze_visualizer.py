@@ -6,7 +6,7 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/03/27 17:04:43 by lbordana        #+#    #+#               #
-#  Updated: 2026/04/07 17:35:53 by lbordana        ###   ########.fr        #
+#  Updated: 2026/04/07 17:37:04 by lbordana        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -344,7 +344,7 @@ class MazeFront(MazeInterface):
         if resolution_path[-1] == 'W':
             path[1] -= tile
             self.snap_buf[path[0]:path[0] + tile,
-                          path[1]:path[1] + tile] = self.res_path 
+                          path[1]:path[1] + tile] = self.res_path
 
     def gen_array(self, filename: str, resizing: bool = False):
         image = cv2.imread(f"{self.theme}/{filename}",
