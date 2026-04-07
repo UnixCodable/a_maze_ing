@@ -15,7 +15,7 @@ class MazeGenerator():
         self.pattern_cells: set[tuple[int, int]] = set()
 
         self.path: str = ""
-        self.frames = []
+        self.frames: list[list[int]] = []
 
     def _init_grid(self) -> None:
 
@@ -74,6 +74,15 @@ class MazeGenerator():
     def _lock_42_cells(self) -> None:
         for (x, y) in self.pattern_cells:
             self.grid[y][x] = 0xF
+
+    def _get_pattern_bounds(self) -> tuple[int, int, int, int]:
+
+        if not self.pattern_cells:
+            return (0, 0, 0, 0)
+
+        xs = [x for x, y in self.pattern_cells]
+        ys = [y for x, y in self.pattern_cells]
+        return (min(xs), min(ys), max(xs), max(ys))
 
     def _run_dfs(self) -> None:
 
@@ -234,58 +243,117 @@ class MazeGenerator():
         # Add wall on both sides
         self.grid[cy][cx] |= direction
         self.grid[ny][nx] |= self.OPPOSITE[direction]
-    
+
     def _solve(self) -> None:
         """
         BFS from entry to exit to find the shortest valid path.
         A move is valid only if the wall between two cells is OPEN (bit = 0).
-        
+
         Stores the result as a string in self.path e.g. "NNEESW".
         Sets self.path = "" if no solution exists
         (shouldn't happen in valid maze).
         """
         from collections import deque
-        
+
         DIR_LETTER = {
             self.NORTH: 'N',
             self.EAST:  'E',
             self.SOUTH: 'S',
             self.WEST:  'W',
         }
-        
+
         ex, ey = self.config.entry
         exit_ = self.config.exit
-        
+
         # Queue stores (x, y, path_string_so_far)
         queue: deque[tuple[int, int, str]] = deque()
         queue.append((ex, ey, ""))
         visited: set[tuple[int, int]] = {(ex, ey)}
-        
+
         while queue:
             x, y, path = queue.popleft()
-            
+
             if (x, y) == exit_:
                 self.path = path
                 return
-            
+
             for direction, letter in DIR_LETTER.items():
                 # Wall is CLOSED if the bit is SET — can't pass
                 if self.grid[y][x] & direction:
                     continue
-                
+
                 dx, dy = self.DELTA[direction]
                 nx, ny = x + dx, y + dy
-                
+
                 if not (0 <= nx < self.width and 0 <= ny < self.height):
                     continue
-                
+
                 if (nx, ny) not in visited:
                     visited.add((nx, ny))
                     queue.append((nx, ny, path + letter))
-                    self.frames.append([nx, ny, -1])
-        
+                    self.animate(x, y)
+
         self.path = ""  # no solution found
 
+<<<<<<< HEAD:mazegen/maze_generator.py
+=======
+    def _add_loops(self) -> None:
+
+        protected: set[tuple[int, int]] = set(self.pattern_cells)
+
+        entry = self.config.entry    # e.g. (0, 0)
+        exit_ = self.config.exit     # e.g. (19, 14)
+
+        # Protect entry and exit cells directly
+        protected.add(entry)
+        protected.add(exit_)
+
+        # Protect each immediate neighbour of entry and exit
+        # A neighbour is any in-bounds cell adjacent to them
+        for cell in (entry, exit_):
+            cx, cy = cell
+            for direction in (self.NORTH, self.SOUTH,
+                              self.EAST, self.WEST):
+                dx, dy = self.DELTA[direction]
+                nx, ny = cx + dx, cy + dy
+
+                if (0 <= nx < self.width
+                        and 0 <= ny < self.height):
+                    protected.add((nx, ny))
+
+        candidates: list[tuple[int, int, int]] = []
+
+        for y in range(self.height):
+            for x in range(self.width):
+
+                if (x, y) in protected:
+                    continue
+
+                for direction in (self.EAST, self.SOUTH):
+                    dx, dy = self.DELTA[direction]
+                    nx, ny = x + dx, y + dy
+
+                    if not (0 <= nx < self.width
+                            and 0 <= ny < self.height):
+                        continue
+
+                    # neighbour must also not be protected
+                    if (nx, ny) in protected:
+                        continue
+
+                    # wall must currently be CLOSED
+                    if self.grid[y][x] & direction:
+                        candidates.append((x, y, direction))
+
+        # ── Shuffle and remove walls
+        self.rng.shuffle(candidates)
+
+        loop_count = int(len(candidates) * .1)
+
+        for x, y, direction in candidates[:loop_count]:
+            self._carve_wall(x, y, direction)
+
+>>>>>>> github/rai_test:src/mazegen/maze_generator.py
     def generate(self) -> None:
         """
         PUBLIC METHOD — call this to build the maze.
@@ -308,14 +376,39 @@ class MazeGenerator():
         else:
             self.pattern_cells = pattern
             self._lock_42_cells()
+<<<<<<< HEAD:mazegen/maze_generator.py
         
         # self._run_dfs()
         self._run_hunt_and_kill()
+=======
+
+        if self.pattern_cells:
+            bounds = self._get_pattern_bounds()
+            sx, sy, ex, ey = bounds
+
+            if self.config.entry in self.pattern_cells:
+                raise ValueError(
+                    f"ENTRY {self.config.entry} is inside the '42' pattern "
+                    f"(columns {sx}-{ex}, rows {sy}-{ey}). "
+                    f"Move ENTRY or change SEED."
+                )
+
+            if self.config.exit in self.pattern_cells:
+                raise ValueError(
+                    f"EXIT {self.config.exit} is inside the '42' pattern "
+                    f"(columns {sx}-{ex}, rows {sy}-{ey}). "
+                    f"Move EXIT or change SEED."
+                )
+
+        self._run_dfs()
+>>>>>>> github/rai_test:src/mazegen/maze_generator.py
         self._fix_open_areas()
-        
+        if not self.config.perfect:
+            self._add_loops
+
         self._solve()
         self.animate_short_path()
-    
+
     def save(self) -> None:
         """
         PUBLIC METHOD — call after generate() to write the output file.
@@ -328,7 +421,7 @@ class MazeGenerator():
         """
         ex, ey = self.config.entry
         exit_ = self.config.exit
-        
+
         try:
             with open(self.config.output_file, 'w') as f:
                 for row in self.grid:
@@ -340,18 +433,18 @@ class MazeGenerator():
         except OSError as e:
             raise ValueError(f"Cannot write output file: {e}")
 
-    def animate(self, x, y):
+    def animate(self, x: int, y: int) -> None:
         self.frames.append([x, y, self.grid[y][x]])
 
-    def animate_save_file(self):
+    def animate_save_file(self) -> None:
         try:
             with open("animation.txt", "w") as f:
                 for frame in self.frames:
                     f.write(f"[{frame[0]}, {frame[1]}, {frame[2]}]\n")
         except OSError as e:
             raise ValueError(f"Cannot write output file: {e}")
-    
-    def animate_short_path(self):
+
+    def animate_short_path(self) -> None:
         x, y = self.config.entry
 
         MOVE = {
@@ -366,21 +459,21 @@ class MazeGenerator():
             x += dx
             y += dy
 
-            self.frames.append([x, y, -2])
+            self.animate(x, y)
 
     # Constants
     NORTH = 0x1
     EAST = 0x2
     SOUTH = 0x4
     WEST = 0x8
-    
+
     DELTA = {
         NORTH: (0, -1),
         EAST: (1, 0),
         SOUTH: (0, 1),
         WEST: (-1, 0),
     }
-    
+
     OPPOSITE = {
         NORTH: SOUTH,
         EAST: WEST,

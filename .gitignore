@@ -1,6 +1,17 @@
-<<<<<<< HEAD
 .vscode
 .vscode/*
-=======
-__pychache__/
->>>>>>> origin/rai_test
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+
+# Build and Packaging
+build/
+dist/
+*.egg-info/
+*.whl
+*.tar.gz
+
+# Virtual environments
+venv/
+.venv/
