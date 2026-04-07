@@ -118,11 +118,13 @@ class MazeGenerator():
         start_x, start_y = self.config.entry
 
         visited: set[tuple[int, int]] = set()
-        visited.add((start_x, start_y))
+        stack: set[tuple[int, int]] = set()
+        stack.add((start_x, start_y))
 
-        # Also mark pattern cells as visited so DFS never enters them
+        # Also mark pattern cells as visited so H&K never enters them
         visited.update(self.pattern_cells)
 
+        x, y = start_x, start_y
         while True:
             directions = [self.NORTH, self.SOUTH, self.EAST, self.WEST]
             self.rng.shuffle(directions)
@@ -135,22 +137,37 @@ class MazeGenerator():
                 # Check bounds + not visited
                 if (0 <= nx < self.width
                         and 0 <= ny < self.height
-                        and (nx, ny) not in visited):
+                        and (nx, ny) not in stack):
 
                     #  calls the method above
                     self._carve_wall(x, y, direction)
-                    visited.add((nx, ny))
-                    stack.append((nx, ny))
+                    x, y = nx, ny
+                    stack.add((nx, ny))
                     self.animate(nx, ny)
                     moved = True
                     break
+            
+            if moved is False:
 
-            if not moved:
-                for x in range(self.config.height):
-                    for y in range(self.config.width):
-                        if ((x, y) not in visited and (x + 1, y) or (x, y + 1)
-                            in visited):
-                            continue
+                for y_pos in range(self.height):
+                    for x_pos in range(self.width):
+
+                        if (x_pos, y_pos) not in visited:
+                            for direction in directions:
+                                dx, dy = self.DELTA[direction]
+                                nx, ny = x_pos + dx, y_pos + dy
+                                if (nx, ny) in stack and (nx, ny) not in visited:
+                                    self._carve_wall(x_pos, y_pos, direction)
+                                    visited.add((nx, ny))
+                                    x, y = nx, ny
+                                    moved = True
+                                    self.save()
+                                    break
+                    if moved is True:
+                        break
+
+            if moved is False:
+                break
 
 
     def _fix_open_areas(self) -> None:
@@ -292,7 +309,8 @@ class MazeGenerator():
             self.pattern_cells = pattern
             self._lock_42_cells()
         
-        self._run_dfs()
+        # self._run_dfs()
+        self._run_hunt_and_kill()
         self._fix_open_areas()
         
         self._solve()
