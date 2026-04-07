@@ -6,7 +6,7 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/03/27 17:04:43 by lbordana        #+#    #+#               #
-#  Updated: 2026/04/07 17:37:04 by lbordana        ###   ########.fr        #
+#  Updated: 2026/04/07 17:52:44 by lbordana        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -588,7 +588,7 @@ def parsed_data():
             if d[2] > 0:
                 d[2] = hex[d[2]]
                 animation.append(d)
-    return (parsed, directions, animation)
+    return (parsed, directions, parsed)
 
 
 def render():

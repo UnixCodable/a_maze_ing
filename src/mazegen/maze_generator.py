@@ -295,8 +295,6 @@ class MazeGenerator():
 
         self.path = ""  # no solution found
 
-<<<<<<< HEAD:mazegen/maze_generator.py
-=======
     def _add_loops(self) -> None:
 
         protected: set[tuple[int, int]] = set(self.pattern_cells)
@@ -348,12 +346,12 @@ class MazeGenerator():
         # ── Shuffle and remove walls
         self.rng.shuffle(candidates)
 
-        loop_count = int(len(candidates) * .1)
+        loop_count = int(len(candidates) * 5)
 
         for x, y, direction in candidates[:loop_count]:
             self._carve_wall(x, y, direction)
+            self.animate(x, y)
 
->>>>>>> github/rai_test:src/mazegen/maze_generator.py
     def generate(self) -> None:
         """
         PUBLIC METHOD — call this to build the maze.
@@ -376,11 +374,6 @@ class MazeGenerator():
         else:
             self.pattern_cells = pattern
             self._lock_42_cells()
-<<<<<<< HEAD:mazegen/maze_generator.py
-        
-        # self._run_dfs()
-        self._run_hunt_and_kill()
-=======
 
         if self.pattern_cells:
             bounds = self._get_pattern_bounds()
@@ -401,7 +394,7 @@ class MazeGenerator():
                 )
 
         self._run_dfs()
->>>>>>> github/rai_test:src/mazegen/maze_generator.py
+        # self._run_hunt_and_kill()
         self._fix_open_areas()
         if not self.config.perfect:
             self._add_loops
