@@ -6,7 +6,7 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/03/27 17:04:43 by lbordana        #+#    #+#               #
-#  Updated: 2026/04/07 17:52:44 by lbordana        ###   ########.fr        #
+#  Updated: 2026/04/07 20:12:44 by lbordana        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -17,7 +17,7 @@ from typing import Any
 import numpy as np
 import json
 import cv2
-# from time import sleep, time
+from time import sleep, time
 # from a_maze_ing import main as a_maze_ing
 from typing import Generator
 from config_parser import read_config
@@ -283,7 +283,7 @@ class MazeFront(MazeInterface):
                 background[:, :, 3] = 255
         self.image_to_memory(background, self.background)
         self.put_to_screen(self.background.id, 0, 0)
-        self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITE, self.background.id)
+        self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITABLE, self.background.id)
 
     def generate_logo(self) -> None:
         width = self.logo_texture.shape[1]
@@ -547,7 +547,7 @@ class Controler(MazeFront):
             # for _ in range():
             for _ in range(self.speed):
                 next(self.generator)
-                # sleep(0.5)
+                # sleep(0.2)
         except StopIteration:
             self.generate_entrance_exit()
             self.generate_resolution(resolution_path)
@@ -588,7 +588,7 @@ def parsed_data():
             if d[2] > 0:
                 d[2] = hex[d[2]]
                 animation.append(d)
-    return (parsed, directions, parsed)
+    return (parsed, directions, animation)
 
 
 def render():

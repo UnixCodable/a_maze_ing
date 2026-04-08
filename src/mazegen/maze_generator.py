@@ -1,4 +1,5 @@
 import random
+from typing import Optional
 from config_parser import MazeConfig
 
 
@@ -122,9 +123,28 @@ class MazeGenerator():
             if not moved:
                 stack.pop()   # backtrack
 
+    def _scan(self, directions: list, visited: set[tuple[int, int]],
+              stack: set[tuple[int, int]]) -> Optional[tuple[int, int]]:
+
+        for ly in range(0, self.height):
+            for lx in range(0, self.width):
+
+                if (lx, ly) not in visited and (lx, ly) not in stack:
+
+                    for direction in directions:
+                        dx, dy = self.DELTA[direction]
+                        nx, ny = lx + dx, ly + dy
+
+                        if (nx, ny) in stack and (nx, ny) not in visited:
+                            self._carve_wall(lx, ly, direction)
+                            stack.add((lx, ly))
+                            return (lx, ly)
+        return None
+
     def _run_hunt_and_kill(self) -> None:
 
-        start_x, start_y = self.config.entry
+        start_x, start_y = (self.rng.randint(0, self.width),
+                            self.rng.randint(0, self.height))
 
         visited: set[tuple[int, int]] = set()
         stack: set[tuple[int, int]] = set()
@@ -143,10 +163,10 @@ class MazeGenerator():
                 dx, dy = self.DELTA[direction]
                 nx, ny = x + dx, y + dy
 
-                # Check bounds + not visited
+                # Check bounds + not visited / stacked
                 if (0 <= nx < self.width
                         and 0 <= ny < self.height
-                        and (nx, ny) not in stack):
+                        and (nx, ny) not in stack and (nx, ny) not in visited):
 
                     #  calls the method above
                     self._carve_wall(x, y, direction)
@@ -155,29 +175,12 @@ class MazeGenerator():
                     self.animate(nx, ny)
                     moved = True
                     break
-            
-            if moved is False:
-
-                for y_pos in range(self.height):
-                    for x_pos in range(self.width):
-
-                        if (x_pos, y_pos) not in visited:
-                            for direction in directions:
-                                dx, dy = self.DELTA[direction]
-                                nx, ny = x_pos + dx, y_pos + dy
-                                if (nx, ny) in stack and (nx, ny) not in visited:
-                                    self._carve_wall(x_pos, y_pos, direction)
-                                    visited.add((nx, ny))
-                                    x, y = nx, ny
-                                    moved = True
-                                    self.save()
-                                    break
-                    if moved is True:
-                        break
 
             if moved is False:
-                break
-
+                scan_result = self._scan(directions, visited, stack)
+                if scan_result is None:
+                    return
+                x, y = scan_result
 
     def _fix_open_areas(self) -> None:
         """
@@ -393,8 +396,10 @@ class MazeGenerator():
                     f"Move EXIT or change SEED."
                 )
 
-        self._run_dfs()
-        # self._run_hunt_and_kill()
+        if self.config.algorithm == 'hunt_and_kill':
+            self._run_hunt_and_kill()
+        else:
+            self._run_dfs()
         self._fix_open_areas()
         if not self.config.perfect:
             self._add_loops

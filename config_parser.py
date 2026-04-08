@@ -15,6 +15,7 @@ class MazeConfig(BaseModel):
     output_file: str
     perfect:     bool
     seed:        int | None = None
+    algorithm:   str | None = None
 
     @model_validator(mode="after")
     def validate_all(self) -> "MazeConfig":
