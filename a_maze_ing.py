@@ -1,6 +1,5 @@
 import sys
 from config_parser import read_config, MazeConfig
-# from mazegen import MazeGenerator
 from maze_visualizer import render
 from src.mazegen import MazeGenerator
 from maze_errors import (
