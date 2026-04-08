@@ -6,7 +6,7 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/03/27 17:04:43 by lbordana        #+#    #+#               #
-#  Updated: 2026/04/08 15:15:10 by lbordana        ###   ########.fr        #
+#  Updated: 2026/04/08 16:12:53 by lbordana        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -20,6 +20,23 @@ import cv2
 # from time import sleep, time
 from typing import Generator
 from config_parser import read_config
+
+
+class Keys():
+    SPACEBAR = 32
+    ARROW_LEFT = 65361
+    ARROW_UP = 65362
+    ARROW_RIGHT = 65363
+    ARROW_DOWN = 65364
+    A = 97
+    W = 119
+    D = 100
+    S = 115
+    R = 114
+    E = 101
+    T = 116
+    PLUS = 61
+    MINUS = 45
 
 
 class ImgData():
@@ -367,32 +384,33 @@ class Controler(MazeFront):
         self.mlx_loop_exit(self.mlx)
 
     def key_commands(self, key_num, *m):
+
         logo_width = self.logo_texture.shape[1]
-        print(key_num)
-        if key_num == 114:
+
+        # Regenerate the maze
+        if key_num == Keys.R:
             self.maze_gen.generate()
             self.maze_gen.save()
             self.animation = self.maze_gen.animate_save_file()
-            print('A')
             self.speed = 1
             self.running_state = True
             self.snap_buf.fill(0)
             self.generate_floor()
             self.generator = self.generate_walls(self.animation)
-        if key_num == 101:
+
+        # Reanimate the maze
+        if key_num == Keys.E:
+            self.speed = 1
+            self.snap_buf.fill(0)
+            self.running_state = True
+            self.generate_floor()
             if self.animation is not None:
-                self.speed = 1
-                self.snap_buf.fill(0)
-                self.running_state = True
-                self.generate_floor()
                 self.generator = self.generate_walls(self.animation)
             else:
-                self.speed = 1
-                self.snap_buf.fill(0)
-                self.running_state = True
-                self.generate_floor()
                 self.generator = self.generate_walls(parsed_data()[0])
-        if key_num == 32 and self.running_state is True:
+
+        # Pause the maze
+        if key_num == Keys.SPACEBAR and self.running_state is True:
             self.erase_text()
             text = self.console_text('PAUSE', 60)
             console = self.create_mlx_image(700, 300)
@@ -403,11 +421,15 @@ class Controler(MazeFront):
             self.mlx_destroy_image(self.mlx, console.id)
             self.running_state = False
             return
-        if key_num == 32 and self.running_state is False:
+
+        # Start the maze back
+        if key_num == Keys.SPACEBAR and self.running_state is False:
             self.erase_text()
             self.running_state = True
             return
-        if key_num == 116:
+
+        # Change maze theme
+        if key_num == Keys.T:
             theme = ['classic',
                      'classic_red',
                      'pokemon',
@@ -432,7 +454,9 @@ class Controler(MazeFront):
             self.generate_logo()
             self.generate_floor()
             self.mask_creator()
-        if key_num == 61:
+
+        # Speed up the maze
+        if key_num == Keys.PLUS:
             if self.speed < 500:
                 if self.speed < 5:
                     self.speed += 1
@@ -450,7 +474,9 @@ class Controler(MazeFront):
                                    100 - self.view_port_w,
                                    100 - self.view_port_h)
                 self.mlx_destroy_image(self.mlx, console.id)
-        if key_num == 45:
+
+        # Speed down the maze
+        if key_num == Keys.MINUS:
             if self.speed > 1:
                 if self.speed <= 5:
                     self.speed -= 1
@@ -468,7 +494,9 @@ class Controler(MazeFront):
                                    100 - self.view_port_w,
                                    100 - self.view_port_h)
                 self.mlx_destroy_image(self.mlx, console.id)
-        if key_num == 65361 or key_num == 97:
+
+        # Slide the maze right to see on the left
+        if key_num == Keys.ARROW_LEFT or key_num == Keys.A:
             if self.view_port_w > self.base_width * -1:
                 # for _ in range(20):
                 self.view_port_w -= 200
@@ -484,9 +512,10 @@ class Controler(MazeFront):
                 self.put_to_screen(self.snap.id,
                                    self.pos_x - self.view_port_w,
                                    self.pos_y - self.view_port_h)
-        if key_num == 65363 or key_num == 100:
+
+        # Slide the maze left to see on right
+        if key_num == Keys.ARROW_RIGHT or key_num == Keys.D:
             if self.view_port_w < self.base_width:
-                # for _ in range(20):
                 self.view_port_w += 200
                 self.put_to_screen(self.background.id, 0, 0)
                 self.put_to_screen(
@@ -500,9 +529,10 @@ class Controler(MazeFront):
                 self.put_to_screen(self.snap.id,
                                    self.pos_x - self.view_port_w,
                                    self.pos_y - self.view_port_h)
-        if key_num == 65362 or key_num == 119:
+
+        # Slide the maze down to see top
+        if key_num == Keys.ARROW_UP or key_num == Keys.W:
             if self.view_port_h > 0:
-                # for _ in range(20):
                 self.view_port_h -= 200
                 self.put_to_screen(self.background.id, 0, 0)
                 self.put_to_screen(
@@ -516,7 +546,9 @@ class Controler(MazeFront):
                 self.put_to_screen(self.snap.id,
                                    self.pos_x - self.view_port_w,
                                    self.pos_y - self.view_port_h)
-        if key_num == 65364 or key_num == 115:
+
+        # Slide the maze up to see bottom
+        if key_num == Keys.ARROW_DOWN or key_num == Keys.S:
             if self.view_port_h < self.base_height:
                 self.view_port_h += 200
                 self.put_to_screen(self.background.id, 0, 0)
@@ -536,7 +568,6 @@ class Controler(MazeFront):
         logo_width = self.logo_texture.shape[1]
         if mouse_num == 4:
             if self.view_port_h > 0:
-                # for _ in range(20):
                 self.view_port_h -= 60
                 self.put_to_screen(self.background.id, 0, 0)
                 self.put_to_screen(
@@ -566,15 +597,12 @@ class Controler(MazeFront):
                                    self.pos_x - self.view_port_w,
                                    self.pos_y - self.view_port_h)
 
-    def generate(self, *resolution_path):
+    def generate(self, *trash):
         if self.running_state is False:
             return
-        # start = time()
         try:
-            # for _ in range():
             for _ in range(self.speed):
                 next(self.generator)
-                # sleep(0.2)
         except StopIteration:
             self.generate_entrance_exit()
             self.generate_resolution(parsed_data()[1])
@@ -582,13 +610,10 @@ class Controler(MazeFront):
         self.put_to_screen(self.snap.id,
                            self.pos_x - self.view_port_w,
                            self.pos_y - self.view_port_h)
-        # end = time()
-        # print(end - start)
 
 
 def parsed_data():
     parsed = []
-    # animation = []
     with open("maze.txt", 'r') as file:
         data = file.readlines()
         nb = 0
