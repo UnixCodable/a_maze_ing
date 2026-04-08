@@ -6,7 +6,7 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/03/27 17:04:43 by lbordana        #+#    #+#               #
-#  Updated: 2026/04/08 03:23:00 by lbordana        ###   ########.fr        #
+#  Updated: 2026/04/08 05:14:26 by lbordana        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -14,8 +14,9 @@ from mlx import Mlx
 from PIL import Image, ImageDraw, ImageFont
 from PIL.Image import Image as PillowImage
 from typing import Any
+from src.mazegen import MazeGenerator
 import numpy as np
-import json
+# import json
 import cv2
 # from time import sleep, time
 # from a_maze_ing import main as a_maze_ing
@@ -78,6 +79,8 @@ class MazeInterface(Mlx):
         self.pos_x = int((self.win_width / 2) - self.base_width / 2)
         self.pos_y = 500
         self.running_state = True
+        self.animation = None
+        self.maze_gen = None
         self.view_port_h = 0
         self.view_port_w = 0
 
@@ -367,6 +370,30 @@ class Controler(MazeFront):
 
     def key_commands(self, key_num, *m):
         logo_width = self.logo_texture.shape[1]
+        print(key_num)
+        if key_num == 114:
+            self.maze_gen.generate()
+            self.maze_gen.save()
+            self.animation = self.maze_gen.animate_save_file()
+            print('A')
+            self.speed = 1
+            self.running_state = True
+            self.snap_buf.fill(0)
+            self.generate_floor()
+            self.generator = self.generate_walls(self.animation)
+        if key_num == 101:
+            if self.animation is not None:
+                self.speed = 1
+                self.snap_buf.fill(0)
+                self.running_state = True
+                self.generate_floor()
+                self.generator = self.generate_walls(self.animation)
+            else:
+                self.speed = 1
+                self.snap_buf.fill(0)
+                self.running_state = True
+                self.generate_floor()
+                self.generator = self.generate_walls(parsed_data()[0])
         if key_num == 32 and self.running_state is True:
             self.erase_text()
             text = self.console_text('PAUSE', 60)
@@ -400,7 +427,9 @@ class Controler(MazeFront):
             except IndexError:
                 self.__init__(None, theme[0], False)
             self.mlx_clear_window(self.mlx, self.win)
-            self.generator = self.generate_walls(parsed_data()[2])
+            self.running_state = True
+            self.speed = self.maze_width * self.maze_height
+            self.generator = self.generate_walls(parsed_data()[0])
             self.generate_background()
             self.generate_logo()
             self.generate_floor()
@@ -539,7 +568,7 @@ class Controler(MazeFront):
                                    self.pos_x - self.view_port_w,
                                    self.pos_y - self.view_port_h)
 
-    def generate(self, resolution_path):
+    def generate(self, *resolution_path):
         if self.running_state is False:
             return
         # start = time()
@@ -550,7 +579,7 @@ class Controler(MazeFront):
                 # sleep(0.2)
         except StopIteration:
             self.generate_entrance_exit()
-            self.generate_resolution(resolution_path)
+            self.generate_resolution(parsed_data()[1])
             self.running_state = False
         self.put_to_screen(self.snap.id,
                            self.pos_x - self.view_port_w,
@@ -561,7 +590,7 @@ class Controler(MazeFront):
 
 def parsed_data():
     parsed = []
-    animation = []
+    # animation = []
     with open("maze.txt", 'r') as file:
         data = file.readlines()
         nb = 0
@@ -578,30 +607,26 @@ def parsed_data():
         for nb_d, d in enumerate(to_parse):
             for nb_char, char in enumerate(d[:-1]):
                 parsed.append([nb_char, nb_d, d[nb_char]])
-    with open("animation.txt", "r") as file:
-        data = file.readlines()
-        to_parse = []
-        hex = '0123456789ABCDEF'
-        for d in data:
-            to_parse.append(json.loads(d.strip()))
-        for d in to_parse:
-            if d[2] > 0:
-                d[2] = hex[d[2]]
-                animation.append(d)
-    return (parsed, directions, animation)
+    return (parsed, directions)
 
 
-def render():
+def render(gen: MazeGenerator,
+           animation: list[list[int, int, str]] | None = None):
     config = read_config("config.txt")
     m = Controler(config)
-    m.generator = m.generate_walls(parsed_data()[2])
+    m.maze_gen = gen
+    if animation is not None:
+        m.animation = animation
+        m.generator = m.generate_walls(m.animation)
+    else:
+        m.generator = m.generate_walls(parsed_data()[0])
     m.mlx_hook(m.win, 33, 0, Controler.close_window, m)
     m.generate_background()
     m.generate_logo()
     m.generate_floor()
     m.mlx_key_hook(m.win, m.key_commands, m)
     m.mlx_mouse_hook(m.win, m.mouse_commands, m)
-    m.mlx_loop_hook(m.mlx, m.generate, parsed_data()[1])
+    m.mlx_loop_hook(m.mlx, m.generate, None)
     m.mlx_loop(m.mlx)
 
 

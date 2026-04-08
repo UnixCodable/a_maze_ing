@@ -369,6 +369,7 @@ class MazeGenerator():
         7. _solve            → find shortest path, store in self.path
         """
         self._init_grid()
+        self.frames = []
 
         pattern = self._get_42_cells()
         if pattern is None:
@@ -432,15 +433,17 @@ class MazeGenerator():
             raise ValueError(f"Cannot write output file: {e}")
 
     def animate(self, x: int, y: int) -> None:
-        self.frames.append([x, y, self.grid[y][x]])
+        hexadecimal = '0123456789ABCDEF'
+        self.frames.append([x, y, hexadecimal[self.grid[y][x]]])
 
-    def animate_save_file(self) -> None:
-        try:
-            with open("animation.txt", "w") as f:
-                for frame in self.frames:
-                    f.write(f"[{frame[0]}, {frame[1]}, {frame[2]}]\n")
-        except OSError as e:
-            raise ValueError(f"Cannot write output file: {e}")
+    def animate_save_file(self) -> list[list[int, int, str]]:
+        return self.frames
+        # try:
+        #     with open("animation.txt", "w") as f:
+        #         for frame in self.frames:
+        #             f.write(f"[{frame[0]}, {frame[1]}, {frame[2]}]\n")
+        # except OSError as e:
+        #     raise ValueError(f"Cannot write output file: {e}")
 
     def animate_short_path(self) -> None:
         x, y = self.config.entry

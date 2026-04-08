@@ -28,8 +28,10 @@ def main() -> None:
         gen = MazeGenerator(config)         # set up
         gen.generate()                      # build maze
         gen.save()
-        gen.animate_save_file()                       # write file
-        render()
+        if raw.get('animation') is True:
+            render(gen, gen.animate_save_file())
+        else:
+            render(gen)
         # display will be: MazeDisplay(gen).show()  ← later
 
     except ConfigFileError as e:

@@ -16,6 +16,7 @@ class MazeConfig(BaseModel):
     perfect:     bool
     seed:        int | None = None
     algorithm:   str | None = None
+    animation:   bool = False
 
     @model_validator(mode="after")
     def validate_all(self) -> "MazeConfig":
@@ -64,7 +65,7 @@ def read_config(filename: str) -> dict:
 
     # These are ALL keys the parser accepts (mandatory + optional)
     KNOWN_KEYS = MANDATORY_KEYS | {
-        "seed", "algorithm", "loop_factor"
+        "seed", "algorithm", "loop_factor", "animation"
     }
 
     config: dict = {}
@@ -162,6 +163,15 @@ def read_config(filename: str) -> dict:
                     raise ConfigTypeError(
                         filename, line_number,
                         "PERFECT", value,
+                        "'True' or 'False'"
+                    )
+                config[key] = value.lower() == "true"
+
+            elif key == "animation":
+                if value.lower() not in ("true", "false"):
+                    raise ConfigTypeError(
+                        filename, line_number,
+                        "Animation", value,
                         "'True' or 'False'"
                     )
                 config[key] = value.lower() == "true"

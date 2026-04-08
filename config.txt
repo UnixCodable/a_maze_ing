@@ -5,3 +5,4 @@ EXIT=19,19
 OUTPUT_FILE=maze.txt
 PERFECT=True
 ALGORITHM=hunt_and_kill
+ANIMATION=True
