@@ -6,7 +6,7 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/03/27 17:04:43 by lbordana        #+#    #+#               #
-#  Updated: 2026/04/08 15:07:20 by lbordana        ###   ########.fr        #
+#  Updated: 2026/04/08 15:15:10 by lbordana        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -167,7 +167,7 @@ class MazeFront(MazeInterface):
         self.res_path = self.gen_array('resolution_path.png', True)
         self.tile = self.create_mlx_image(self.tile_size * 3,
                                           self.tile_size * 3)
-        self.mask: np.ndarray = np.asarray(None)
+        self.mask: np.ndarray | None = None
         self.floor = self.create_mlx_image(self.base_width, self.base_height)
         self.background = self.create_mlx_image(self.win_width,
                                                 self.win_height)
@@ -248,13 +248,14 @@ class MazeFront(MazeInterface):
     def generate_walls(self, data: list) -> Generator[Any, None, None]:
 
         tile = self.tile_size
-        if self.mask == np.asarray(None):
+        if self.mask is None:
             self.mask_creator()
         for d in data:
             binary = bin(int(d[2], 16))[2:].zfill(4)
             p_snap = (d[0] * (tile * 2),
                       d[1] * (tile * 2))
-            mask = self.mask.copy()
+            if self.mask is not None:
+                mask = self.mask.copy()
             if int(binary[-1]) == 0:
                 mask[0:tile, tile:tile*2] = self.path
             if int(binary[-2]) == 0:
@@ -282,7 +283,6 @@ class MazeFront(MazeInterface):
                 background[:, :, 3] = 255
         self.image_to_memory(background, self.background)
         self.put_to_screen(self.background.id, 0, 0)
-        self.mlx_sync(self.mlx, 1, self.background.id)
 
     def generate_logo(self) -> None:
         width = self.logo_texture.shape[1]
@@ -291,7 +291,6 @@ class MazeFront(MazeInterface):
                            int((self.win_width / 2) -
                                (width / 2)) - self.view_port_w,
                            100 - self.view_port_h)
-        self.mlx_sync(self.mlx, 1, self.logo.id)
 
     def generate_entrance_exit(self):
         tile = self.tile_size
@@ -623,6 +622,7 @@ def render(gen: MazeGenerator,
     m.generate_background()
     m.generate_logo()
     m.generate_floor()
+    m.mlx_sync(m.mlx, 3, m.win)
     m.mlx_key_hook(m.win, m.key_commands, m)
     m.mlx_mouse_hook(m.win, m.mouse_commands, m)
     m.mlx_loop_hook(m.mlx, m.generate, None)
