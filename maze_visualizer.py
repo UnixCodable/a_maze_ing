@@ -6,7 +6,7 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/03/27 17:04:43 by lbordana        #+#    #+#               #
-#  Updated: 2026/04/08 12:30:34 by lbordana        ###   ########.fr        #
+#  Updated: 2026/04/08 15:07:20 by lbordana        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -36,9 +36,9 @@ class ImgData():
     def __init__(self) -> None:
         """Initialization of an image, all components adresses per item"""
         self.id = None
-        self.width = None
-        self.height = None
-        self.data = None
+        self.width: int | None = None
+        self.height: int | None = None
+        self.data: np.ndarray = np.asarray(None)
         self.bpp = None
         self.sl = None
         self.iformat = None
@@ -97,7 +97,7 @@ class MazeInterface(Mlx):
         data in the data address of a ImgData object.
 
         Args:
-            array (np.uint8): An image (from cv2 or PIL) converted as array
+            array (np.ndarray): An image (from cv2 or PIL) converted as array
             image (ImgData): ImgData object, containing all image pointers
         """
         buffer = np.frombuffer(image.data, dtype=np.uint8).reshape(array.shape)
@@ -157,7 +157,6 @@ class MazeFront(MazeInterface):
                  interface: bool = True) -> None:
         if interface is True:
             super().__init__(config)
-        self.historic = []
         self.theme = f"themes/{theme}"
         self.background_texture = self.gen_array('background_texture.png')
         self.wall = self.gen_array('wall.png', True)
@@ -168,7 +167,7 @@ class MazeFront(MazeInterface):
         self.res_path = self.gen_array('resolution_path.png', True)
         self.tile = self.create_mlx_image(self.tile_size * 3,
                                           self.tile_size * 3)
-        self.mask: np.ndarray | None = None
+        self.mask: np.ndarray = np.asarray(None)
         self.floor = self.create_mlx_image(self.base_width, self.base_height)
         self.background = self.create_mlx_image(self.win_width,
                                                 self.win_height)
@@ -249,7 +248,7 @@ class MazeFront(MazeInterface):
     def generate_walls(self, data: list) -> Generator[Any, None, None]:
 
         tile = self.tile_size
-        if self.mask is None:
+        if self.mask == np.asarray(None):
             self.mask_creator()
         for d in data:
             binary = bin(int(d[2], 16))[2:].zfill(4)
@@ -283,7 +282,7 @@ class MazeFront(MazeInterface):
                 background[:, :, 3] = 255
         self.image_to_memory(background, self.background)
         self.put_to_screen(self.background.id, 0, 0)
-        self.mlx_sync(self.mlx, self.SYNC_IMAGE_WRITABLE, self.background.id)
+        self.mlx_sync(self.mlx, 1, self.background.id)
 
     def generate_logo(self) -> None:
         width = self.logo_texture.shape[1]
@@ -292,6 +291,7 @@ class MazeFront(MazeInterface):
                            int((self.win_width / 2) -
                                (width / 2)) - self.view_port_w,
                            100 - self.view_port_h)
+        self.mlx_sync(self.mlx, 1, self.logo.id)
 
     def generate_entrance_exit(self):
         tile = self.tile_size
@@ -349,6 +349,8 @@ class MazeFront(MazeInterface):
     def gen_array(self, filename: str, resizing: bool = False):
         image = cv2.imread(f"{self.theme}/{filename}",
                            flags=cv2.IMREAD_UNCHANGED)
+        if image is None:
+            return
         image_argb = cv2.cvtColor(image, code=cv2.COLOR_BGR2BGRA)
         if resizing is True:
             image_scale = cv2.resize(image_argb, (self.tile_size,
