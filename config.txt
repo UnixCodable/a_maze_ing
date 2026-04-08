@@ -3,6 +3,9 @@ HEIGHT=100
 ENTRY=21,21
 EXIT=4,4
 OUTPUT_FILE=maze.txt
-PERFECT=True
-ALGORITHM=hunt_and_kill
+PERFECT=False
+ALGORITHM=dfs
 ANIMATION=True
+
+
+#hunt_and_kill
