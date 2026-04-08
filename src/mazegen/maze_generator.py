@@ -16,7 +16,7 @@ class MazeGenerator():
         self.pattern_cells: set[tuple[int, int]] = set()
 
         self.path: str = ""
-        self.frames: list[list[int]] = []
+        self.frames: list[list[int | int | str]] = []
 
     def _init_grid(self) -> None:
 
@@ -436,7 +436,7 @@ class MazeGenerator():
         hexadecimal = '0123456789ABCDEF'
         self.frames.append([x, y, hexadecimal[self.grid[y][x]]])
 
-    def animate_save_file(self) -> list[list[int, int, str]]:
+    def animate_save_file(self) -> list[list[int | int | str]]:
         return self.frames
         # try:
         #     with open("animation.txt", "w") as f:

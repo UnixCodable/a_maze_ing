@@ -6,7 +6,7 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/03/27 17:04:43 by lbordana        #+#    #+#               #
-#  Updated: 2026/04/08 11:36:27 by lbordana        ###   ########.fr        #
+#  Updated: 2026/04/08 12:30:34 by lbordana        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -77,8 +77,8 @@ class MazeInterface(Mlx):
         self.pos_x = int((self.win_width / 2) - self.base_width / 2)
         self.pos_y = 500
         self.running_state = True
-        self.animation = None
-        self.maze_gen = None
+        self.animation: list[Any] = []
+        self.maze_gen: MazeGenerator | None = None
         self.view_port_h = 0
         self.view_port_w = 0
 
@@ -92,7 +92,7 @@ class MazeInterface(Mlx):
         """
         self.mlx_put_image_to_window(self.mlx, self.win, img_id, pos_x, pos_y)
 
-    def image_to_memory(self, array: np.uint8, image: ImgData) -> None:
+    def image_to_memory(self, array: np.ndarray, image: ImgData) -> None:
         """Take a 3 dimensional array of a converted image and place those
         data in the data address of a ImgData object.
 
@@ -168,7 +168,7 @@ class MazeFront(MazeInterface):
         self.res_path = self.gen_array('resolution_path.png', True)
         self.tile = self.create_mlx_image(self.tile_size * 3,
                                           self.tile_size * 3)
-        self.mask = None
+        self.mask: np.ndarray | None = None
         self.floor = self.create_mlx_image(self.base_width, self.base_height)
         self.background = self.create_mlx_image(self.win_width,
                                                 self.win_height)
@@ -183,7 +183,7 @@ class MazeFront(MazeInterface):
                          reshape(self.snapshot.shape))
         self.snap_buf.fill(0)
         self.last_bin = '1111'
-        self.generator = None
+        self.generator: Generator[Any, None, None] | None = None
         self.speed = 1
 
     def console_text(self, string: str, font_size: int) -> PillowImage:
@@ -246,10 +246,9 @@ class MazeFront(MazeInterface):
                            self.pos_x - self.view_port_w,
                            self.pos_y - self.view_port_h)
 
-    def generate_walls(self, data: list = None) -> Generator:
+    def generate_walls(self, data: list) -> Generator[Any, None, None]:
 
         tile = self.tile_size
-
         if self.mask is None:
             self.mask_creator()
         for d in data:
@@ -609,7 +608,7 @@ def parsed_data():
 
 
 def render(gen: MazeGenerator,
-           animation: list[list[int, int, str]] | None = None):
+           animation: list[list[int | str]] | None = None):
     config = read_config("config.txt")
     m = Controler(config)
     m.maze_gen = gen
@@ -626,7 +625,3 @@ def render(gen: MazeGenerator,
     m.mlx_mouse_hook(m.win, m.mouse_commands, m)
     m.mlx_loop_hook(m.mlx, m.generate, None)
     m.mlx_loop(m.mlx)
-
-
-if __name__ == '__main__':
-    render()
