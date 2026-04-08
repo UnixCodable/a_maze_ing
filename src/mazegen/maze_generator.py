@@ -143,8 +143,8 @@ class MazeGenerator():
 
     def _run_hunt_and_kill(self) -> None:
 
-        start_x, start_y = (self.rng.randint(0, self.width),
-                            self.rng.randint(0, self.height))
+        start_x, start_y = (self.rng.randint(0, self.width - 1),
+                            self.rng.randint(0, self.height - 1))
 
         visited: set[tuple[int, int]] = set()
         stack: set[tuple[int, int]] = set()

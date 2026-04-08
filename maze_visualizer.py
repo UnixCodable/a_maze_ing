@@ -6,7 +6,7 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/03/27 17:04:43 by lbordana        #+#    #+#               #
-#  Updated: 2026/04/08 16:12:53 by lbordana        ###   ########.fr        #
+#  Updated: 2026/04/08 17:14:45 by lbordana        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -23,6 +23,7 @@ from config_parser import read_config
 
 
 class Keys():
+    """Keyboard keys to X11 events key numbers"""
     SPACEBAR = 32
     ARROW_LEFT = 65361
     ARROW_UP = 65362
@@ -40,6 +41,7 @@ class Keys():
 
 
 class ImgData():
+
     """
     Gathering mlx images data adresses:
         - ID : Image identifier (C Pointer)
@@ -50,8 +52,11 @@ class ImgData():
         - SL : Used to get / modified number of bytes used to store one line
         - Iformat : Define format used as color channel - BGRA / ARGB
     """
+
     def __init__(self) -> None:
+
         """Initialization of an image, all components adresses per item"""
+
         self.id = None
         self.width: int | None = None
         self.height: int | None = None
@@ -62,18 +67,22 @@ class ImgData():
 
 
 class MazeInterface(Mlx):
+
     """Maze base components
 
     Args:
         Mlx : Mlx is a C wrapper of the MiniLibX project, an X-Window
               programming API.
     """
+
     def __init__(self, config: dict) -> None:
+
         """Initialization of mlx and maze basics data.
 
         Args:
             config (dict): Configuration of the maze (Dimensions)
         """
+
         super().__init__()
         self.mlx = self.mlx_init()
         self.maze_width: int = int(config.get('width', 0))
@@ -100,6 +109,7 @@ class MazeInterface(Mlx):
         self.view_port_w = 0
 
     def put_to_screen(self, img_id: Any, pos_x: int, pos_y: int) -> None:
+
         """Method that use the mlx_put_image_to_window method
 
         Args:
@@ -107,9 +117,11 @@ class MazeInterface(Mlx):
             pos_x (int): The x position to place the image
             pos_y (int): The y position to place the image
         """
+
         self.mlx_put_image_to_window(self.mlx, self.win, img_id, pos_x, pos_y)
 
     def image_to_memory(self, array: np.ndarray, image: ImgData) -> None:
+
         """Take a 3 dimensional array of a converted image and place those
         data in the data address of a ImgData object.
 
@@ -117,10 +129,12 @@ class MazeInterface(Mlx):
             array (np.ndarray): An image (from cv2 or PIL) converted as array
             image (ImgData): ImgData object, containing all image pointers
         """
+
         buffer = np.frombuffer(image.data, dtype=np.uint8).reshape(array.shape)
         buffer[:, :, :] = array[:, :, :]
 
     def create_mlx_image(self, width: int, height: int) -> ImgData:
+
         """Create a new ImgData object and returns it.
 
         Args:
@@ -130,11 +144,13 @@ class MazeInterface(Mlx):
         Returns:
             ImgData: An ImgData object (mlx compatible image)
         """
+
         mlx_image = ImgData()
         mlx_image.id = self.mlx_new_image(self.mlx, width, height)
         mlx_image.width, mlx_image.height = (width, height)
         mlx_image.data, mlx_image.bpp, mlx_image.sl, mlx_image.iformat = \
             self.mlx_get_data_addr(mlx_image.id)
+
         return mlx_image
 
     def scale_tile_size(self) -> float:
@@ -144,36 +160,50 @@ class MazeInterface(Mlx):
             int: Returns the multiplier scale of a tile
         """
         scale: float = 1
+
         if self.maze_height < 12 or self.maze_width < 20:
             scale = 1.4
+
         if self.maze_height > 30 or self.maze_width > 50:
             scale = 0.7
+
         if self.maze_height > 60 or self.maze_width > 100:
             scale = 0.4
+
         if self.maze_height > 150 or self.maze_width > 200:
             scale = 0.2
+
         if self.maze_height > 400 or self.maze_width > 500:
             scale = 0.12
+
         if self.maze_height > 900 or self.maze_width > 1000:
             scale = 0.08
+
         return scale
 
     def get_window_size(self):
+
         screen_size = self.mlx_get_screen_size(self.mlx)
         width = (self.maze_width * 2 + 1) * self.tile_size + 400
         height = (self.maze_height * 2 + 1) * self.tile_size + 700
+
         if width > screen_size[1]:
             width = screen_size[1]
+
         if height > screen_size[2]:
             height = screen_size[2]
+
         return (width, height)
 
 
 class MazeFront(MazeInterface):
+
     def __init__(self, config: dict, theme: str = 'classic',
                  interface: bool = True) -> None:
+
         if interface is True:
             super().__init__(config)
+
         self.theme = f"themes/{theme}"
         self.background_texture = self.gen_array('background_texture.png')
         self.wall = self.gen_array('wall.png', True)
@@ -203,6 +233,7 @@ class MazeFront(MazeInterface):
         self.speed = 1
 
     def console_text(self, string: str, font_size: int) -> PillowImage:
+
         """Text to image method. Draw with PIL a text as a new image with 4
            colors channels (RGBA)
 
@@ -213,17 +244,23 @@ class MazeFront(MazeInterface):
         Returns:
             ImgData: Newly created image of a text
         """
+
         image = Image.new('RGBA', (700, 300), (0, 0, 0, 200))
         draw = ImageDraw.Draw(image)
         font = ImageFont.truetype(f'{self.theme}/font.ttf', font_size)
         draw.text((150, 120), string, font=font)
+
         return image
 
     def erase_text(self) -> None:
+
+        """Erase the text by creating and applying a background stamp"""
+
         p_height = self.background_texture.shape[0]
         p_width = self.background_texture.shape[1]
         logo_width = self.logo_texture.shape[1]
         background = np.zeros((400, 900, 4), dtype=np.uint8)
+
         for w in range(0, 900, p_width):
             for h in range(0, 400, p_height):
                 h_size = 400 - h if h + p_height > 400 else p_height
@@ -231,8 +268,10 @@ class MazeFront(MazeInterface):
                 background[h:h + h_size, w:w + w_size, 0:3] =\
                     self.background_texture[0:h_size, 0:w_size, 0:3]
                 background[:, :, 3] = 255
+
         eraser = self.create_mlx_image(900, 400)
         self.image_to_memory(background, eraser)
+
         self.put_to_screen(eraser.id,
                            0 - self.view_port_h,
                            0 - self.view_port_h)
@@ -240,6 +279,7 @@ class MazeFront(MazeInterface):
                            int((self.win_width / 2) -
                                (logo_width / 2)) - self.view_port_w,
                            100 - self.view_port_h)
+
         self.mlx_destroy_image(self.mlx, eraser.id)
 
     def mask_creator(self) -> None:
