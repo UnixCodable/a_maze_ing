@@ -6,7 +6,7 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/03/27 17:04:43 by lbordana        #+#    #+#               #
-#  Updated: 2026/04/08 05:14:26 by lbordana        ###   ########.fr        #
+#  Updated: 2026/04/08 11:36:27 by lbordana        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -16,10 +16,8 @@ from PIL.Image import Image as PillowImage
 from typing import Any
 from src.mazegen import MazeGenerator
 import numpy as np
-# import json
 import cv2
 # from time import sleep, time
-# from a_maze_ing import main as a_maze_ing
 from typing import Generator
 from config_parser import read_config
 
