@@ -353,7 +353,7 @@ class MazeGenerator():
         # ── Shuffle and remove walls
         self.rng.shuffle(candidates)
 
-        loop_count = int(len(candidates) * 5)
+        loop_count = int(len(candidates) * .5)
 
         for x, y, direction in candidates[:loop_count]:
             self._carve_wall(x, y, direction)
@@ -407,7 +407,7 @@ class MazeGenerator():
             self._run_dfs()
         self._fix_open_areas()
         if not self.config.perfect:
-            self._add_loops
+            self._add_loops()
 
         self._solve()
         self.animate_short_path()
