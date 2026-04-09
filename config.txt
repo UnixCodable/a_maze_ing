@@ -4,8 +4,10 @@ ENTRY=39,48
 EXIT=4,4
 OUTPUT_FILE=maze.txt
 PERFECT=True
-ALGORITHM=hunt_and_kill
+ALGORITHM=dfs
 ANIMATION=True
 
-
-#hunt_and_kill
+#  Algorithms:
+#
+#  - hunt_and_kill
+#  - dfs

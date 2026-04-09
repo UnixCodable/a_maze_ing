@@ -6,7 +6,7 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/03/27 17:04:43 by lbordana        #+#    #+#               #
-#  Updated: 2026/04/09 17:14:56 by lbordana        ###   ########.fr        #
+#  Updated: 2026/04/09 18:06:01 by lbordana        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -102,7 +102,7 @@ class MazeInterface(Mlx):
         self.pos_x = int((self.win_width / 2) - self.base_width / 2)
         self.pos_y = 500
         self.running_state = True
-        self.animation: list[Any] = []
+        self.animation: list[Any] | None = None
         self.maze_gen: MazeGenerator | None = None
         self.view_port_h = 0
         self.view_port_w = 0
@@ -763,7 +763,7 @@ class Controler(MazeFront):
             for _ in range(self.speed):
                 if self.generator is not None:
                     next(self.generator)
-        except StopIteration:
+        except StopIteration as err:
             self.generate_entrance_exit()
             self.generate_resolution(parsed_data()[1])
             self.running_state = False
