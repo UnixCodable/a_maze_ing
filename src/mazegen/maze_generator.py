@@ -153,7 +153,7 @@ class MazeGenerator():
 
         for ly in range(0, self.height):
             for lx in range(0, self.width):
-                if (lx, ly) not in pattern:
+                if (lx, ly) not in pattern and (lx, ly) not in stack:
                     unvisited.append((lx, ly))
 
         x, y = start_x, start_y
