@@ -2,7 +2,8 @@
 
 # Install project dependencies
 install:
-	python3 -m pip install flake8 mypy pydantic pillow numpy opencv-python mlx-2.2-py3-none-any.whl
+	python3 -m  pip install --upgrade pip
+	python3 -m pip install -r requirements.txt
 	python3 -m pip install -e .
 
 # Run the main program
