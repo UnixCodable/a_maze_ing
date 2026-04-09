@@ -6,7 +6,7 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/03/27 17:04:43 by lbordana        #+#    #+#               #
-#  Updated: 2026/04/09 16:54:48 by lbordana        ###   ########.fr        #
+#  Updated: 2026/04/09 17:14:56 by lbordana        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -761,7 +761,8 @@ class Controler(MazeFront):
             return
         try:
             for _ in range(self.speed):
-                next(self.generator)
+                if self.generator is not None:
+                    next(self.generator)
         except StopIteration:
             self.generate_entrance_exit()
             self.generate_resolution(parsed_data()[1])
@@ -771,7 +772,7 @@ class Controler(MazeFront):
                            self.pos_y - self.view_port_h)
 
 
-def parsed_data() -> None:
+def parsed_data() -> tuple:
     parsed = []
     with open("maze.txt", 'r') as file:
         data = file.readlines()
