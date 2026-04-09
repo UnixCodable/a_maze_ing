@@ -48,6 +48,16 @@ class MazeConfig(BaseModel):
                 "entry and exit cannot be the same cell",
                 "choose two different coordinates"
             )
+        if self.algorithm == "hunt_and_kill":
+            if self.width > 700:
+                raise ConfigValueError("Width", str(self.width),
+                                       "for the algorithm hunt_and_kill",
+                                       " value should be less than 701")
+
+            if self.height > 700:
+                raise ConfigValueError("Height", str(self.height),
+                                       "for the algorithm hunt_and_kill",
+                                       " value should be less than 701")
 
         return self
 
@@ -184,6 +194,7 @@ def read_config(filename: str) -> dict:
                         filename, line_number,
                         "SEED", value, "a whole number"
                     )
+
             else:
                 # string keys like output_file, algorithm
                 config[key] = value
