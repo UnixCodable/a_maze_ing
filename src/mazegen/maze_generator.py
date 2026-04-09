@@ -87,6 +87,8 @@ class MazeGenerator():
         return (min(xs), min(ys), max(xs), max(ys))
 
     def _run_dfs(self) -> None:
+        
+        print('\n=== Generating Maze with DFS ===\n')
 
         start_x, start_y = self.config.entry
 
@@ -97,7 +99,8 @@ class MazeGenerator():
         visited.update(self.pattern_cells)
 
         stack = [(start_x, start_y)]
-        p_bar = tqdm(total=self.width * self.height, desc="Generating maze")
+        p_bar = tqdm(total=(self.width * self.height - len(visited)),
+                     desc="Generating maze")
 
         while stack:
             x, y = stack[-1]
