@@ -6,7 +6,7 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/03/27 17:04:43 by lbordana        #+#    #+#               #
-#  Updated: 2026/04/09 13:44:30 by lbordana        ###   ########.fr        #
+#  Updated: 2026/04/09 16:54:48 by lbordana        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -302,7 +302,7 @@ class MazeFront(MazeInterface):
 
         Write wall image (as np array) into the position of a tile :
 
-            0:Tile, Tile:Tile*2 = 0:32, 32:64
+            0:Tile, Tile:Tile*2 == 0:32, 32:64
 
             W - wall        0W0
             F - floor       000       <--- Here
@@ -756,7 +756,7 @@ class Controler(MazeFront):
                                    self.pos_x - self.view_port_w,
                                    self.pos_y - self.view_port_h)
 
-    def generate(self, *trash):
+    def generate(self, *trash) -> None:
         if self.running_state is False:
             return
         try:
@@ -771,7 +771,7 @@ class Controler(MazeFront):
                            self.pos_y - self.view_port_h)
 
 
-def parsed_data():
+def parsed_data() -> None:
     parsed = []
     with open("maze.txt", 'r') as file:
         data = file.readlines()

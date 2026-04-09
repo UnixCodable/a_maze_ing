@@ -1,4 +1,5 @@
 import random
+from tqdm import tqdm
 from typing import Optional
 from config_parser import MazeConfig
 
@@ -96,6 +97,7 @@ class MazeGenerator():
         visited.update(self.pattern_cells)
 
         stack = [(start_x, start_y)]
+        p_bar = tqdm(total=self.width * self.height, desc="Generating maze")
 
         while stack:
             x, y = stack[-1]
@@ -115,6 +117,7 @@ class MazeGenerator():
                     #  calls the method above
                     self._carve_wall(x, y, direction)
                     visited.add((nx, ny))
+                    p_bar.update(1)
                     stack.append((nx, ny))
                     self.animate(nx, ny)
                     moved = True
@@ -157,7 +160,7 @@ class MazeGenerator():
                     unvisited.append((lx, ly))
 
         x, y = start_x, start_y
-        while True:
+        for _ in tqdm(range(0, len(unvisited))):
             directions = [self.NORTH, self.SOUTH, self.EAST, self.WEST]
             self.rng.shuffle(directions)
 
@@ -353,7 +356,7 @@ class MazeGenerator():
         # ── Shuffle and remove walls
         self.rng.shuffle(candidates)
 
-        loop_count = int(len(candidates) * .5)
+        loop_count = int(len(candidates) * 0.02)
 
         for x, y, direction in candidates[:loop_count]:
             self._carve_wall(x, y, direction)
