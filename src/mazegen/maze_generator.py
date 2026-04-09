@@ -123,35 +123,38 @@ class MazeGenerator():
             if not moved:
                 stack.pop()   # backtrack
 
-    def _scan(self, directions: list, visited: set[tuple[int, int]],
-              stack: list[tuple[int, int]]) -> Optional[tuple[int, int]]:
+    def _scan(self, directions: list,
+              stack: set[tuple[int, int]],
+              unvisited: list[tuple[int, int]]) -> Optional[tuple[int, int]]:
 
-        for ly in range(0, self.height):
-            for lx in range(0, self.width):
+        for u in unvisited:
+            for direction in directions:
+                dx, dy = self.DELTA[direction]
+                nx, ny = u[0] + dx, u[1] + dy
 
-                if (lx, ly) not in visited and (lx, ly) not in stack:
-
-                    for direction in directions:
-                        dx, dy = self.DELTA[direction]
-                        nx, ny = lx + dx, ly + dy
-
-                        if (nx, ny) in stack and (nx, ny) not in visited:
-                            self._carve_wall(lx, ly, direction)
-                            stack.append((lx, ly))
-                            return (lx, ly)
+                if (nx, ny) in stack:
+                    self._carve_wall(u[0], u[1], direction)
+                    stack.add(u)
+                    unvisited.pop(unvisited.index(u))
+                    return u
         return None
 
     def _run_hunt_and_kill(self) -> None:
-
         start_x, start_y = (self.rng.randint(0, self.width - 1),
                             self.rng.randint(0, self.height - 1))
 
-        visited: set[tuple[int, int]] = set()
-        stack: list[tuple[int, int]] = list()
-        stack.append((start_x, start_y))
+        pattern: set[tuple[int, int]] = set()
+        unvisited: list[tuple[int, int]] = list()
+        stack: set[tuple[int, int]] = set()
+        stack.add((start_x, start_y))
 
         # Also mark pattern cells as visited so H&K never enters them
-        visited.update(self.pattern_cells)
+        pattern.update(self.pattern_cells)
+
+        for ly in range(0, self.height):
+            for lx in range(0, self.width):
+                if (lx, ly) not in pattern:
+                    unvisited.append((lx, ly))
 
         x, y = start_x, start_y
         while True:
@@ -166,19 +169,19 @@ class MazeGenerator():
                 # Check bounds + not visited / stacked
                 if (0 <= nx < self.width
                         and 0 <= ny < self.height
-                        and (nx, ny) not in stack and (nx, ny) not in visited):
+                        and (nx, ny) not in stack and (nx, ny) not in pattern):
 
                     #  calls the method above
                     self._carve_wall(x, y, direction)
                     x, y = nx, ny
-                    stack.append((nx, ny))
-                    self.animate(nx, ny)
+                    stack.add((nx, ny))
+                    unvisited.pop(unvisited.index((nx, ny)))
+                    # self.animate(nx, ny)
                     moved = True
                     break
 
             if moved is False:
-                scan_result = self._scan(directions, visited, stack)
-                print(scan_result)
+                scan_result = self._scan(directions, stack, unvisited)
                 if scan_result is None:
                     return
                 x, y = scan_result

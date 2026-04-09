@@ -6,7 +6,7 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/03/27 17:04:43 by lbordana        #+#    #+#               #
-#  Updated: 2026/04/08 17:14:45 by lbordana        ###   ########.fr        #
+#  Updated: 2026/04/09 04:38:49 by lbordana        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -17,7 +17,6 @@ from typing import Any
 from src.mazegen import MazeGenerator
 import numpy as np
 import cv2
-# from time import sleep, time
 from typing import Generator
 from config_parser import read_config
 
@@ -497,7 +496,7 @@ class Controler(MazeFront):
 
         # Speed up the maze
         if key_num == Keys.PLUS:
-            if self.speed < 500:
+            if self.speed < 5000:
                 if self.speed < 5:
                     self.speed += 1
                 elif self.speed < 20:
@@ -506,6 +505,8 @@ class Controler(MazeFront):
                     self.speed += 20
                 elif self.speed < 500:
                     self.speed += 100
+                elif self.speed < 5000:
+                    self.speed += 500
                 self.erase_text()
                 text = self.console_text(f'SPEED {self.speed}', 60)
                 console = self.create_mlx_image(700, 300)
@@ -526,6 +527,8 @@ class Controler(MazeFront):
                     self.speed -= 20
                 elif self.speed <= 500:
                     self.speed -= 100
+                elif self.speed <= 5000:
+                    self.speed -= 500
                 self.erase_text()
                 text = self.console_text(f'SPEED {self.speed}', 60)
                 console = self.create_mlx_image(700, 300)
