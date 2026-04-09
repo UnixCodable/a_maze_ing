@@ -129,7 +129,7 @@ class MazeGenerator():
             if not moved:
                 stack.pop()   # backtrack
 
-    def _scan(self, directions: list,
+    def _scan(self, directions: list[int],
               stack: set[tuple[int, int]],
               unvisited: list[tuple[int, int]]) -> Optional[tuple[int, int]]:
 

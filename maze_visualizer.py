@@ -6,11 +6,11 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/03/27 17:04:43 by lbordana        #+#    #+#               #
-#  Updated: 2026/04/09 23:38:15 by lbordana        ###   ########.fr        #
+#  Updated: 2026/04/10 01:37:22 by lbordana        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
-from mlx import Mlx
+from mlx import Mlx  # type: ignore[import-untyped]
 from PIL import Image, ImageDraw, ImageFont
 from PIL.Image import Image as PillowImage
 from typing import Any
@@ -65,7 +65,7 @@ class ImgData():
         self.iformat = None
 
 
-class MazeInterface(Mlx):
+class MazeInterface(Mlx):  # type: ignore[misc]
 
     """Maze base components
 
@@ -74,7 +74,7 @@ class MazeInterface(Mlx):
               programming API.
     """
 
-    def __init__(self, config: dict) -> None:
+    def __init__(self, config: dict[Any, Any]) -> None:
 
         """Initialization of mlx and maze basics data.
 
@@ -86,8 +86,8 @@ class MazeInterface(Mlx):
         self.mlx = self.mlx_init()
         self.maze_width: int = int(config.get('width', 0))
         self.maze_height: int = int(config.get('height', 0))
-        self.maze_entry: tuple = tuple(config.get('entry', 0))
-        self.maze_exit: tuple = tuple(config.get('exit', 0))
+        self.maze_entry: tuple[int, int] = tuple(config.get('entry', 0))
+        self.maze_exit: tuple[int, int] = tuple(config.get('exit', 0))
         self.tile_size = int(32 * self.scale_tile_size())
         self.base_width = (self.maze_width * 2 + 1) * self.tile_size
         self.base_height = (self.maze_height * 2 + 1) * self.tile_size
@@ -207,14 +207,12 @@ class MazeFront(MazeInterface):
 
     """Maze visualization tools class inheriting from basics data class."""
 
-    def __init__(self, config: dict, theme: str = 'classic',
-                 interface: bool = True) -> None:
+    def __init__(self, config: dict[Any, Any], theme: str = 'classic') -> None:
 
         """Initialize converted to arrays assets, empty array, image objects.
         """
 
-        if interface is True:
-            super().__init__(config)
+        super().__init__(config)
 
         self.theme = f"themes/{theme}"
         self.background_texture = self.gen_array('background_texture.png')
@@ -341,8 +339,8 @@ class MazeFront(MazeInterface):
                            self.pos_x - self.view_port_w,
                            self.pos_y - self.view_port_h)
 
-    def generate_walls(self, data: list[list] | list[tuple])\
-            -> Generator[Any, None, None]:
+    def generate_walls(self, data: list[list[Any]] |
+                       list[tuple[int, int, str]]) -> Generator[Any, None]:
 
         """Append new modified tile mask into snap buffer.
 
@@ -433,7 +431,7 @@ class MazeFront(MazeInterface):
         self.snap_buf[p_exit[1]:p_exit[1] + tile,
                       p_exit[0]:p_exit[0] + tile] = self.exit_texture
 
-    def generate_resolution(self, resolution_path: str) -> None:
+    def generate_resolution(self, resolution_path: list[str]) -> None:
         """Generate path from a resolution string.
 
         N = North
@@ -444,7 +442,7 @@ class MazeFront(MazeInterface):
         Each letter will make a move from one position.
 
         Args:
-            resolution_path (str): _description_
+            resolution_path (list[str]): list of characters definining path.
         """
         tile = self.tile_size
         path = [(self.maze_entry[1] * 2 + 1) * tile,
@@ -497,7 +495,8 @@ class MazeFront(MazeInterface):
             self.snap_buf[path[0]:path[0] + tile,
                           path[1]:path[1] + tile] = self.res_path
 
-    def gen_array(self, filename: str, resizing: bool = False):
+    def gen_array(self, filename: str, resizing: bool = False)\
+            -> np.ndarray:
 
         """Generate an array from an image, keeping or creating BGRA channels.
 
@@ -512,7 +511,7 @@ class MazeFront(MazeInterface):
         image = cv2.imread(f"{self.theme}/{filename}",
                            flags=cv2.IMREAD_UNCHANGED)
         if image is None:
-            return
+            return np.asarray(None)
         image_argb = cv2.cvtColor(image, code=cv2.COLOR_BGR2BGRA)
 
         if resizing is True:
@@ -527,23 +526,22 @@ class Controler(MazeFront):
 
     """Maze controler class usefool for commands. Inherits from maze front"""
 
-    def __init__(self, config: dict, theme: str = 'classic',
-                 interface: bool = True) -> None:
+    def __init__(self, config: dict[Any, Any], theme: str = 'classic') -> None:
 
         """Only init the basics and front maze classes"""
 
-        super().__init__(config, theme, interface)
+        super().__init__(config, theme)
 
     def close_window(self) -> None:
         """Shutdown visualizer"""
         self.mlx_loop_exit(self.mlx)
 
-    def key_commands(self, key_num, *m):
+    def key_commands(self, key_num: int, *m: None) -> None:
 
         logo_width = self.logo_texture.shape[1]
 
         # Regenerate the maze
-        if key_num == Keys.R:
+        if key_num == Keys.R and self.maze_gen is not None:
             self.maze_gen.generate()
             self.maze_gen.save()
             self.animation = self.maze_gen.animate_save_file()
@@ -598,9 +596,34 @@ class Controler(MazeFront):
             self.mlx_destroy_image(self.mlx, self.snap.id)
             self.mlx_destroy_image(self.mlx, self.background.id)
             try:
-                self.__init__(None, theme[theme.index(active) + 1], False)
+                self.theme = f"themes/{theme[theme.index(active) + 1]}"
             except IndexError:
-                self.__init__(None, theme[0], False)
+                self.theme = f"themes/{theme[0]}"
+            self.background_texture = self.gen_array('background_texture.png')
+            self.wall = self.gen_array('wall.png', True)
+            self.path = self.gen_array('path.png', True)
+            self.logo_texture = self.gen_array('logo.png')
+            self.entrance_texture = self.gen_array('entrance.png', True)
+            self.exit_texture = self.gen_array('exit.png', True)
+            self.res_path = self.gen_array('resolution_path.png', True)
+            self.tile = self.create_mlx_image(self.tile_size * 3,
+                                              self.tile_size * 3)
+            self.mask = None
+            self.floor = self.create_mlx_image(self.base_width,
+                                               self.base_height)
+            self.background = self.create_mlx_image(self.win_width,
+                                                    self.win_height)
+            self.snapshot = np.zeros((self.base_height, self.base_width, 4),
+                                     dtype=np.uint8)
+            self.res = np.zeros((self.base_height, self.base_width, 4),
+                                dtype=np.uint8)
+            self.logo = self.create_mlx_image(self.logo_texture.shape[1],
+                                              self.logo_texture.shape[0])
+            self.snap = self.create_mlx_image(self.base_width,
+                                              self.base_height)
+            self.snap_buf = (np.frombuffer(self.snap.data, dtype=np.uint8).
+                             reshape(self.snapshot.shape))
+            self.snap_buf.fill(0)
             self.mlx_clear_window(self.mlx, self.win)
             self.running_state = True
             self.speed = self.maze_width * self.maze_height
@@ -723,7 +746,7 @@ class Controler(MazeFront):
                                    self.pos_x - self.view_port_w,
                                    self.pos_y - self.view_port_h)
 
-    def mouse_commands(self, mouse_num, x, y, *a):
+    def mouse_commands(self, mouse_num: int, x: int, y: int, *a: None) -> None:
         logo_width = self.logo_texture.shape[1]
         if mouse_num == 4:
             if self.view_port_h > 0:
@@ -756,7 +779,7 @@ class Controler(MazeFront):
                                    self.pos_x - self.view_port_w,
                                    self.pos_y - self.view_port_h)
 
-    def generate(self, *trash) -> None:
+    def generate(self, *trash: None) -> None:
         if self.running_state is False:
             return
         try:
@@ -772,7 +795,7 @@ class Controler(MazeFront):
                            self.pos_y - self.view_port_h)
 
 
-def parsed_data() -> tuple:
+def parsed_data() -> tuple[list[list[Any]], list[str]]:
     parsed = []
     with open("maze.txt", 'r') as file:
         data = file.readlines()
@@ -794,7 +817,7 @@ def parsed_data() -> tuple:
 
 
 def render(gen: MazeGenerator,
-           animation: list[list[int | str]] | None = None):
+           animation: list[list[int | str]] | None = None) -> None:
     config = read_config("config.txt")
     m = Controler(config)
     m.maze_gen = gen
