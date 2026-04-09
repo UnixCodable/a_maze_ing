@@ -6,7 +6,7 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/03/27 17:04:43 by lbordana        #+#    #+#               #
-#  Updated: 2026/04/09 18:06:01 by lbordana        ###   ########.fr        #
+#  Updated: 2026/04/09 23:38:15 by lbordana        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -763,7 +763,7 @@ class Controler(MazeFront):
             for _ in range(self.speed):
                 if self.generator is not None:
                     next(self.generator)
-        except StopIteration as err:
+        except StopIteration:
             self.generate_entrance_exit()
             self.generate_resolution(parsed_data()[1])
             self.running_state = False

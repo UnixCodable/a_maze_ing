@@ -87,7 +87,7 @@ class MazeGenerator():
         return (min(xs), min(ys), max(xs), max(ys))
 
     def _run_dfs(self) -> None:
-        
+
         print('\n=== Generating Maze with DFS ===\n')
 
         start_x, start_y = self.config.entry
