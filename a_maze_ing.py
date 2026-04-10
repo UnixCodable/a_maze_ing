@@ -1,20 +1,25 @@
 """Main entry point for maze generation and visualization."""
 
 import sys
-from config_parser import read_config, MazeConfig
-from maze_visualizer import render
-from mazegen import MazeGenerator
-from maze_errors import (
-    MazeError,
-    ConfigFileError,
-    ConfigSyntaxError,
-    ConfigDuplicateKeyError,
-    ConfigMissingKeyError,
-    ConfigTypeError,
-    ConfigValueError,
-    ConfigCoordinateError,
-)
-from pydantic import ValidationError
+
+try:
+    from config_parser import read_config, MazeConfig
+    from maze_visualizer import render
+    from mazegen import MazeGenerator
+    from maze_errors import (
+        MazeError,
+        ConfigFileError,
+        ConfigSyntaxError,
+        ConfigDuplicateKeyError,
+        ConfigMissingKeyError,
+        ConfigTypeError,
+        ConfigValueError,
+        ConfigCoordinateError,
+    )
+    from pydantic import ValidationError
+except:
+    print ('Missing dependencies. Please run make install before running.')
+    sys.exit(1)
 
 
 def main() -> None:
@@ -92,6 +97,10 @@ def main() -> None:
 
     except ValueError as e:
         print(f"[Error] {e}")
+        sys.exit(1)
+    
+    except ModuleNotFoundError:
+        print ('Missing dependencies. Please run make install before running.')
         sys.exit(1)
 
 
