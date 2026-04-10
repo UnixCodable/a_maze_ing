@@ -6,7 +6,7 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/03/27 17:04:43 by lbordana        #+#    #+#               #
-#  Updated: 2026/04/10 01:37:22 by lbordana        ###   ########.fr        #
+#  Updated: 2026/04/10 01:59:28 by lbordana        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -84,6 +84,7 @@ class MazeInterface(Mlx):  # type: ignore[misc]
 
         super().__init__()
         self.mlx = self.mlx_init()
+        self.output = config.get('output_file', 'maze.txt')
         self.maze_width: int = int(config.get('width', 0))
         self.maze_height: int = int(config.get('height', 0))
         self.maze_entry: tuple[int, int] = tuple(config.get('entry', 0))
@@ -538,6 +539,14 @@ class Controler(MazeFront):
 
     def key_commands(self, key_num: int, *m: None) -> None:
 
+        """Execute commands based on the key entered.
+
+        Keys are relative to Key class.
+
+        Args:
+            key_num (int): Number of the key pressed.
+        """
+
         logo_width = self.logo_texture.shape[1]
 
         # Regenerate the maze
@@ -560,7 +569,7 @@ class Controler(MazeFront):
             if self.animation is not None:
                 self.generator = self.generate_walls(self.animation)
             else:
-                self.generator = self.generate_walls(parsed_data()[0])
+                self.generator = self.generate_walls(self.parsed_data()[0])
 
         # Pause the maze
         if key_num == Keys.SPACEBAR and self.running_state is True:
@@ -627,7 +636,7 @@ class Controler(MazeFront):
             self.mlx_clear_window(self.mlx, self.win)
             self.running_state = True
             self.speed = self.maze_width * self.maze_height
-            self.generator = self.generate_walls(parsed_data()[0])
+            self.generator = self.generate_walls(self.parsed_data()[0])
             self.generate_background()
             self.generate_logo()
             self.generate_floor()
@@ -747,6 +756,15 @@ class Controler(MazeFront):
                                    self.pos_y - self.view_port_h)
 
     def mouse_commands(self, mouse_num: int, x: int, y: int, *a: None) -> None:
+
+        """Execute commands based on the mouse button pressed.
+
+        Args:
+            mouse_num (int): Number / ID of the mouse button
+            x (int): Position of the mouse on the x axcis
+            y (int): Position of the mouse on the y axcis
+        """
+
         logo_width = self.logo_texture.shape[1]
         if mouse_num == 4:
             if self.view_port_h > 0:
@@ -780,6 +798,9 @@ class Controler(MazeFront):
                                    self.pos_y - self.view_port_h)
 
     def generate(self, *trash: None) -> None:
+
+        """Call the next value of the generator, building the maze walls."""
+
         if self.running_state is False:
             return
         try:
@@ -788,32 +809,43 @@ class Controler(MazeFront):
                     next(self.generator)
         except StopIteration:
             self.generate_entrance_exit()
-            self.generate_resolution(parsed_data()[1])
+            self.generate_resolution(self.parsed_data()[1])
             self.running_state = False
         self.put_to_screen(self.snap.id,
                            self.pos_x - self.view_port_w,
                            self.pos_y - self.view_port_h)
 
+    def parsed_data(self) -> tuple[list[list[Any]], list[str]]:
 
-def parsed_data() -> tuple[list[list[Any]], list[str]]:
-    parsed = []
-    with open("maze.txt", 'r') as file:
-        data = file.readlines()
-        nb = 0
-        to_parse = []
-        directions = []
-        while data[nb] != '\n':
-            to_parse.append(data[nb])
-            nb += 1
-        nb += 3
-        for d in data[nb]:
-            if d == '\n':
-                break
-            directions.append(d)
-        for nb_d, d in enumerate(to_parse):
-            for nb_char, char in enumerate(d[:-1]):
-                parsed.append([nb_char, nb_d, d[nb_char]])
-    return (parsed, directions)
+        """Parse data of the saved file.
+
+        Returns:
+            tuple[list[list[Any]], list[str]]:
+                    return a tuple with the maze hex and solver path
+        """
+
+        parsed = []
+        with open(self.output, 'r') as file:
+            data = file.readlines()
+            nb = 0
+            to_parse = []
+            directions = []
+
+            while data[nb] != '\n':
+                to_parse.append(data[nb])
+                nb += 1
+
+            nb += 3
+            for d in data[nb]:
+                if d == '\n':
+                    break
+                directions.append(d)
+
+            for nb_d, d in enumerate(to_parse):
+                for nb_char, char in enumerate(d[:-1]):
+                    parsed.append([nb_char, nb_d, d[nb_char]])
+
+        return (parsed, directions)
 
 
 def render(gen: MazeGenerator,
@@ -825,7 +857,7 @@ def render(gen: MazeGenerator,
         m.animation = animation
         m.generator = m.generate_walls(m.animation)
     else:
-        m.generator = m.generate_walls(parsed_data()[0])
+        m.generator = m.generate_walls(m.parsed_data()[0])
     m.mlx_hook(m.win, 33, 0, Controler.close_window, m)
     m.generate_background()
     m.generate_logo()
