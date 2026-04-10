@@ -42,6 +42,7 @@ Once it is launched, here are some commands you can use:\
 **[a]** or **[←]**  to move see the left side of the maze\
 **[s]** or **[↓]**  to move see the bottom of the maze\
 **[d]** or **[→]**  to move see the right side of the maze\
+**[space bar]**     to pause / unpause the maze generation\
 **[mouse wheel]**   to scroll in a fluid way\
 
 ## Resources
@@ -93,3 +94,26 @@ ANIMATION=True
 #  - hunt_and_kill
 #  - dfs
 ```
+
+## Maze algorithms
+
+We chosen to use 2 algorithms:\
+\
+    - DFS (Depth-first search) : Using backtracking when encountering a locked way.\
+        [RSHIKDER PART]\
+    - Hunt and Kill : Using a scan from top when encountering a locked way.\
+        This one was easily reusable with DFS algorithm, and understandable, as it was almost working the same way. I needed to implement a new scan function but otherwise used the DFS structure as patron.\
+
+## Reusability
+
+[RSHIKDER PART]
+
+## Project management
+
+Decisions were taking by the two of us. We had a very nice collaboration and our fixed roles were :\
+    - rshikder for DFS algorithm\
+    - rshikder for parsing / error handling\
+    - lbordana for the visualiser\
+    - lbordana for hunt and kill algorithm\
+\
+This planning didn't move, we worked quite on our side on isolated git branches, and meet up 1 to 3 times a week to discuss our implementations and get reviews for ideas.\
