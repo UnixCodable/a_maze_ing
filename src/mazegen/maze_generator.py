@@ -7,6 +7,7 @@ from config_parser import MazeConfig
 class MazeGenerator():
 
     def __init__(self, config: MazeConfig) -> None:
+        """Initialize MazeGenerator with config parameters."""
         self.config = config
         self.width = config.width
         self.height = config.height
@@ -20,11 +21,13 @@ class MazeGenerator():
         self.frames: list[list[int | int | str]] = []
 
     def _init_grid(self) -> None:
-
+        """Initialize grid with all walls closed (all bits set to 0xF)."""
         self.grid = [[0xF for _ in range(self.width)]
                      for _ in range(self.height)]
 
     def _carve_wall(self, x: int, y: int, direction: int) -> None:
+        """Remove wall between cell (x, y) and its neighbor
+          in the given direction."""
         dx, dy = self.DELTA[direction]
         nx, ny = x + dx, y + dy
 
@@ -34,6 +37,8 @@ class MazeGenerator():
         self.animate(nx, ny)
 
     def _get_42_cells(self) -> set[tuple[int, int]] | None:
+        """Generate set of cells that form the '42' pattern,
+          or None if maze is too small."""
         DIGIT_W, DIGIT__H, GAP = 3, 5, 1
         TOTAL_W = DIGIT_W * 2 + GAP
         TOTAL_H = DIGIT__H
@@ -74,11 +79,13 @@ class MazeGenerator():
         return cells
 
     def _lock_42_cells(self) -> None:
+        """Freeze pattern cells so algorithms won't carve through them."""
         for (x, y) in self.pattern_cells:
             self.grid[y][x] = 0xF
 
     def _get_pattern_bounds(self) -> tuple[int, int, int, int]:
-
+        """Return bounding box (min_x, min_y, max_x, max_y) of
+          the pattern cells."""
         if not self.pattern_cells:
             return (0, 0, 0, 0)
 
@@ -87,7 +94,7 @@ class MazeGenerator():
         return (min(xs), min(ys), max(xs), max(ys))
 
     def _run_dfs(self) -> None:
-
+        """Generate maze using Depth-First Search algorithm."""
         print('\n=== Generating Maze with DFS ===\n')
 
         start_x, start_y = self.config.entry
@@ -132,6 +139,8 @@ class MazeGenerator():
     def _scan(self, directions: list[int],
               stack: set[tuple[int, int]],
               unvisited: list[tuple[int, int]]) -> Optional[tuple[int, int]]:
+        """Find an unvisited cell adjacent to visited
+          stack for Hunt and Kill algorithm."""
 
         for u in unvisited:
             for direction in directions:
@@ -146,7 +155,7 @@ class MazeGenerator():
         return None
 
     def _run_hunt_and_kill(self) -> None:
-
+        """Generate maze using Hunt and Kill algorithm."""
         print('\n=== Generating Maze with Hunt and Kill ===\n')
 
         start_x, start_y = (self.rng.randint(0, self.width - 1),
@@ -314,7 +323,8 @@ class MazeGenerator():
         self.path = ""  # no solution found
 
     def _add_loops(self) -> None:
-
+        """Create loops in the maze by randomly removing ~20% of walls,
+          avoiding critical paths."""
         protected: set[tuple[int, int]] = set(self.pattern_cells)
 
         entry = self.config.entry    # e.g. (0, 0)
@@ -448,13 +458,16 @@ class MazeGenerator():
             raise ValueError(f"Cannot write output file: {e}")
 
     def animate(self, x: int, y: int) -> None:
+        """Record animation frame for cell update at (x, y)."""
         hexadecimal = '0123456789ABCDEF'
         self.frames.append([x, y, hexadecimal[self.grid[y][x]]])
 
     def animate_save_file(self) -> list[list[int | int | str]]:
+        """Return list of animation frames for visualization."""
         return self.frames
 
     def animate_short_path(self) -> None:
+        """Record animation frames for the solution path from entry to exit."""
         x, y = self.config.entry
 
         MOVE = {

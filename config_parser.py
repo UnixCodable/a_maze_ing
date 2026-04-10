@@ -9,6 +9,8 @@ from maze_errors import (ConfigCoordinateError,
 
 
 class MazeConfig(BaseModel):
+    """Configuration model for maze generation with validation."""
+
     width: int = Field(ge=2, le=3000)
     height: int = Field(ge=2, le=3000)
     entry:       tuple[int, int]
@@ -21,7 +23,8 @@ class MazeConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate_all(self) -> "MazeConfig":
-
+        """Validate all configuration constraints after model
+          initialization."""
         ex, ey = self.entry
         xx, xy = self.exit
 
