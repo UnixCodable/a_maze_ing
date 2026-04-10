@@ -17,7 +17,7 @@ try:
         ConfigCoordinateError,
     )
     from pydantic import ValidationError
-except:
+except ModuleNotFoundError:
     print ('Missing dependencies. Please run make install before running.')
     sys.exit(1)
 
