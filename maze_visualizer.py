@@ -6,7 +6,7 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/03/27 17:04:43 by lbordana        #+#    #+#               #
-#  Updated: 2026/04/10 02:36:57 by lbordana        ###   ########.fr        #
+#  Updated: 2026/04/10 17:27:27 by lbordana        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -208,7 +208,7 @@ class MazeFront(MazeInterface):
 
     """Maze visualization tools class inheriting from basics data class."""
 
-    def __init__(self, config: dict[Any, Any], theme: str = 'classic') -> None:
+    def __init__(self, config: dict[Any, Any], theme: str = 'mario') -> None:
 
         """Initialize converted to arrays assets, empty array, image objects.
         """
@@ -290,7 +290,7 @@ class MazeFront(MazeInterface):
                            0 - self.view_port_h)
         self.put_to_screen(self.logo.id,
                            int((self.win_width / 2) -
-                               (logo_width / 2)) - self.view_port_w,
+                               (logo_width / 2)),
                            100 - self.view_port_h)
 
         self.mlx_destroy_image(self.mlx, eraser.id)
@@ -580,8 +580,7 @@ class Controler(MazeFront):
             console = self.create_mlx_image(700, 300)
             self.image_to_memory(np.asarray(text), console)
             self.put_to_screen(console.id,
-                               100 - self.view_port_w,
-                               100 - self.view_port_h)
+                               100, 100 - self.view_port_h)
             self.mlx_destroy_image(self.mlx, console.id)
             self.running_state = False
             return
@@ -662,8 +661,7 @@ class Controler(MazeFront):
                 console = self.create_mlx_image(700, 300)
                 self.image_to_memory(np.asarray(text), console)
                 self.put_to_screen(console.id,
-                                   100 - self.view_port_w,
-                                   100 - self.view_port_h)
+                                   100, 100 - self.view_port_h)
                 self.mlx_destroy_image(self.mlx, console.id)
 
         # Speed down the maze
@@ -684,8 +682,7 @@ class Controler(MazeFront):
                 console = self.create_mlx_image(700, 300)
                 self.image_to_memory(np.asarray(text), console)
                 self.put_to_screen(console.id,
-                                   100 - self.view_port_w,
-                                   100 - self.view_port_h)
+                                   100, 100 - self.view_port_h)
                 self.mlx_destroy_image(self.mlx, console.id)
 
         # Slide the maze right to see on the left
