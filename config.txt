@@ -1,11 +1,13 @@
-WIDTH=15
-HEIGHT=15
-ENTRY=1,1
-EXIT=14,14
+WIDTH=3000
+HEIGHT=3000
+ENTRY=39,48
+EXIT=4,4
 OUTPUT_FILE=maze.txt
-PERFECT=False
+PERFECT=True
 ALGORITHM=dfs
 ANIMATION=True
 
-
-#hunt_and_kill
+#  Algorithms:
+#
+#  - hunt_and_kill
+#  - dfs

@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field, model_validator
+from typing import Any
 from maze_errors import (ConfigCoordinateError,
                          ConfigValueError, ConfigFileError,
                          ConfigSyntaxError,
@@ -8,8 +9,8 @@ from maze_errors import (ConfigCoordinateError,
 
 
 class MazeConfig(BaseModel):
-    width: int = Field(ge=2, le=1500)
-    height: int = Field(ge=2, le=1500)
+    width: int = Field(ge=2, le=3000)
+    height: int = Field(ge=2, le=3000)
     entry:       tuple[int, int]
     exit:        tuple[int, int]
     output_file: str
@@ -62,7 +63,7 @@ class MazeConfig(BaseModel):
         return self
 
 
-def read_config(filename: str) -> dict:
+def read_config(filename: str) -> dict[Any, Any]:
     """
     Read and parse a KEY=VALUE config file.
     Returns a dict of parsed values ready to pass to MazeConfig.
@@ -78,7 +79,7 @@ def read_config(filename: str) -> dict:
         "seed", "algorithm", "loop_factor", "animation"
     }
 
-    config: dict = {}
+    config: dict[Any, Any] = {}
 
     # ── Open the file ─────────────────────────────────────────────
     try:

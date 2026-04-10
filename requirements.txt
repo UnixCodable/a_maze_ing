@@ -1,7 +1,7 @@
-flake8 
-mypy 
-pydantic 
-pillow 
-numpy 
-opencv-python 
+flake8
+mypy
+pydantic
+pillow
+numpy
+opencv-python
 ./mlx-2.2-py3-none-any.whl
