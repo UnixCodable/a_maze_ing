@@ -6,11 +6,11 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/03/27 17:04:43 by lbordana        #+#    #+#               #
-#  Updated: 2026/04/10 18:47:35 by rshikder        ###   ########.fr        #
+#  Updated: 2026/04/10 19:49:24 by lbordana        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
-from mlx import Mlx  # type: ignore[import-untyped]
+from mlx import Mlx
 from PIL import Image, ImageDraw, ImageFont
 from PIL.Image import Image as PillowImage
 from typing import Any
@@ -64,7 +64,7 @@ class ImgData():
         self.iformat = None
 
 
-class MazeInterface(Mlx):  # type: ignore[misc]
+class MazeInterface(Mlx):
 
     """Maze base components
 

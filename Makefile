@@ -24,7 +24,7 @@ clean:
 
 # Lint (mandatory flags from subject)
 lint:
-	flake8 .
+	flake8 . --exclude=venv,__pycache__
 	mypy . --warn-return-any --warn-unused-ignores \
 		--ignore-missing-imports \
 		--disallow-untyped-defs \
@@ -32,7 +32,7 @@ lint:
 
 # Lint strict (optional)
 lint-strict:
-	flake8 .
+	flake8 . --exclude=venv,__pycache__
 	mypy . --strict
 
 # Build the pip package
