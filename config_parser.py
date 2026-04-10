@@ -9,8 +9,8 @@ from maze_errors import (ConfigCoordinateError,
 
 
 class MazeConfig(BaseModel):
-    width: int = Field(ge=2, le=1500)
-    height: int = Field(ge=2, le=1500)
+    width: int = Field(ge=2, le=3000)
+    height: int = Field(ge=2, le=3000)
     entry:       tuple[int, int]
     exit:        tuple[int, int]
     output_file: str

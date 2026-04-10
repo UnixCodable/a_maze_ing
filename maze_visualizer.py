@@ -6,7 +6,7 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/03/27 17:04:43 by lbordana        #+#    #+#               #
-#  Updated: 2026/04/10 01:59:28 by lbordana        ###   ########.fr        #
+#  Updated: 2026/04/10 02:36:57 by lbordana        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -433,6 +433,7 @@ class MazeFront(MazeInterface):
                       p_exit[0]:p_exit[0] + tile] = self.exit_texture
 
     def generate_resolution(self, resolution_path: list[str]) -> None:
+
         """Generate path from a resolution string.
 
         N = North
@@ -445,6 +446,7 @@ class MazeFront(MazeInterface):
         Args:
             resolution_path (list[str]): list of characters definining path.
         """
+
         tile = self.tile_size
         path = [(self.maze_entry[1] * 2 + 1) * tile,
                 (self.maze_entry[0] * 2 + 1) * tile]

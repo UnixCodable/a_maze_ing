@@ -100,7 +100,7 @@ class MazeGenerator():
 
         stack = [(start_x, start_y)]
         p_bar = tqdm(total=(self.width * self.height - len(visited)),
-                     desc="Generating maze")
+                     desc="Generating maze", colour='green', ascii='  =')
 
         while stack:
             x, y = stack[-1]
@@ -146,6 +146,9 @@ class MazeGenerator():
         return None
 
     def _run_hunt_and_kill(self) -> None:
+
+        print('\n=== Generating Maze with Hunt and Kill ===\n')
+
         start_x, start_y = (self.rng.randint(0, self.width - 1),
                             self.rng.randint(0, self.height - 1))
 
@@ -163,7 +166,9 @@ class MazeGenerator():
                     unvisited.append((lx, ly))
 
         x, y = start_x, start_y
-        for _ in tqdm(range(0, len(unvisited))):
+        for _ in tqdm(range(0, len(unvisited)),
+                      desc='Generating maze',
+                      colour='green', ascii='  ='):
             directions = [self.NORTH, self.SOUTH, self.EAST, self.WEST]
             self.rng.shuffle(directions)
 
