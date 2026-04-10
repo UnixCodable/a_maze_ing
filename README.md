@@ -47,7 +47,11 @@ Once it is launched, here are some commands you can use:\
 
 ## Resources
 \
-[RSHIKDER SIDE]\
+[RSHIKDER resources] :\
+For this project I have watched tutorilas online on Depth-First Search algorithm for maze generation and breadth first search algorithm to solve the shortest path. Read online resoures, https://www.geeksforgeeks.org/python/python-program-for-depth-first-search-or-dfs-for-a-graph/
+https://www.geeksforgeeks.org/dsa/breadth-first-search-or-bfs-for-a-graph/.
+https://en.wikipedia.org/wiki/Maze_generation_algorithm
+I have used AI to understand the concept, expectaion and improvement of functionalities. 
 \
 - lbordana resources :\
 \
@@ -101,12 +105,14 @@ We chosen to use 2 algorithms:\
 \
     - DFS (Depth-first search) : Using backtracking when encountering a locked way.\
         [RSHIKDER PART]\
+        DFS(Depth-First Search algorithm) is used to create maze generator. as it is easy and beginner friendly and its default output is a perfect maze which is the requirements of the subject.
     - Hunt and Kill : Using a scan from top when encountering a locked way.\
         This one was easily reusable with DFS algorithm, and understandable, as it was almost working the same way. I needed to implement a new scan function but otherwise used the DFS structure as patron.\
 
 ## Reusability
 
 [RSHIKDER PART]
+    For the reusabitlity of the project we have put the mazegeneration as a stand alone class in a module "maze_generator.py" in directory "src" as per required for .toml file. And have put "__init__.py" file for python to consider as a packge. we have created a .toml file for the build system and generation of .tar.gz and .whl file so that can be installed by pip and used. and put "readme.md" in the directory to guide how it can be used
 
 ## Project management
 

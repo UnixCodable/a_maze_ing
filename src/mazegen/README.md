@@ -102,4 +102,5 @@ The saved maze file contains:
 
 - Python 3.10+
 - `config_parser` module (part of the project)
+- "tqdm" package for for visualization loading bar
 

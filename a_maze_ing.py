@@ -1,3 +1,5 @@
+"""Main entry point for maze generation and visualization."""
+
 import sys
 from config_parser import read_config, MazeConfig
 from maze_visualizer import render
@@ -16,6 +18,7 @@ from pydantic import ValidationError
 
 
 def main() -> None:
+    """Parse config, generate maze, and render visualization."""
     if len(sys.argv) != 2:
         print("Usage: python3 a_maze_ing.py config.txt")
         sys.exit(1)
