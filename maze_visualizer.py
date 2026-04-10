@@ -6,7 +6,7 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/03/27 17:04:43 by lbordana        #+#    #+#               #
-#  Updated: 2026/04/10 17:27:27 by lbordana        ###   ########.fr        #
+#  Updated: 2026/04/10 17:38:09 by lbordana        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -208,7 +208,7 @@ class MazeFront(MazeInterface):
 
     """Maze visualization tools class inheriting from basics data class."""
 
-    def __init__(self, config: dict[Any, Any], theme: str = 'mario') -> None:
+    def __init__(self, config: dict[Any, Any], theme: str) -> None:
 
         """Initialize converted to arrays assets, empty array, image objects.
         """
@@ -529,7 +529,7 @@ class Controler(MazeFront):
 
     """Maze controler class usefool for commands. Inherits from maze front"""
 
-    def __init__(self, config: dict[Any, Any], theme: str = 'classic') -> None:
+    def __init__(self, config: dict[Any, Any], theme: str = 'mario') -> None:
 
         """Only init the basics and front maze classes"""
 
@@ -723,7 +723,8 @@ class Controler(MazeFront):
         # Slide the maze down to see top
         if key_num == Keys.ARROW_UP or key_num == Keys.W:
             if self.view_port_h > 0:
-                self.view_port_h -= 200
+                self.view_port_h -= (200 if self.view_port_h >= 200
+                                     else self.view_port_h)
                 self.put_to_screen(self.background.id, 0, 0)
                 self.put_to_screen(
                     self.logo.id,
