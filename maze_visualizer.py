@@ -6,7 +6,7 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/03/27 17:04:43 by lbordana        #+#    #+#               #
-#  Updated: 2026/04/10 18:43:01 by rshikder        ###   ########.fr        #
+#  Updated: 2026/04/10 18:47:35 by rshikder        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -207,7 +207,7 @@ class MazeFront(MazeInterface):
 
     """Maze visualization tools class inheriting from basics data class."""
 
-    def __init__(self, config: dict[Any, Any], theme: str = 'classic') -> None:
+    def __init__(self, config: dict[Any, Any], theme: str) -> None:
 
         """Initialize converted to arrays assets, empty array, image objects.
         """
@@ -289,7 +289,7 @@ class MazeFront(MazeInterface):
                            0 - self.view_port_h)
         self.put_to_screen(self.logo.id,
                            int((self.win_width / 2) -
-                               (logo_width / 2)) - self.view_port_w,
+                               (logo_width / 2)),
                            100 - self.view_port_h)
 
         self.mlx_destroy_image(self.mlx, eraser.id)
@@ -528,7 +528,7 @@ class Controler(MazeFront):
 
     """Maze controler class usefool for commands. Inherits from maze front"""
 
-    def __init__(self, config: dict[Any, Any], theme: str = 'classic') -> None:
+    def __init__(self, config: dict[Any, Any], theme: str = 'mario') -> None:
 
         """Only init the basics and front maze classes"""
 
@@ -579,8 +579,7 @@ class Controler(MazeFront):
             console = self.create_mlx_image(700, 300)
             self.image_to_memory(np.asarray(text), console)
             self.put_to_screen(console.id,
-                               100 - self.view_port_w,
-                               100 - self.view_port_h)
+                               100, 100 - self.view_port_h)
             self.mlx_destroy_image(self.mlx, console.id)
             self.running_state = False
             return
@@ -661,8 +660,7 @@ class Controler(MazeFront):
                 console = self.create_mlx_image(700, 300)
                 self.image_to_memory(np.asarray(text), console)
                 self.put_to_screen(console.id,
-                                   100 - self.view_port_w,
-                                   100 - self.view_port_h)
+                                   100, 100 - self.view_port_h)
                 self.mlx_destroy_image(self.mlx, console.id)
 
         # Speed down the maze
@@ -683,8 +681,7 @@ class Controler(MazeFront):
                 console = self.create_mlx_image(700, 300)
                 self.image_to_memory(np.asarray(text), console)
                 self.put_to_screen(console.id,
-                                   100 - self.view_port_w,
-                                   100 - self.view_port_h)
+                                   100, 100 - self.view_port_h)
                 self.mlx_destroy_image(self.mlx, console.id)
 
         # Slide the maze right to see on the left
@@ -725,7 +722,8 @@ class Controler(MazeFront):
         # Slide the maze down to see top
         if key_num == Keys.ARROW_UP or key_num == Keys.W:
             if self.view_port_h > 0:
-                self.view_port_h -= 200
+                self.view_port_h -= (200 if self.view_port_h >= 200
+                                     else self.view_port_h)
                 self.put_to_screen(self.background.id, 0, 0)
                 self.put_to_screen(
                     self.logo.id,
