@@ -3,7 +3,7 @@
 import sys
 from config_parser import read_config, MazeConfig
 from maze_visualizer import render
-from src.mazegen import MazeGenerator
+from mazegen import MazeGenerator
 from maze_errors import (
     MazeError,
     ConfigFileError,
@@ -25,15 +25,24 @@ def main() -> None:
 
     try:
         raw = read_config(sys.argv[1])   # → dict
-        config = MazeConfig(**raw)          # → validated config
+        config = MazeConfig(**raw)       # → validated config
+        config_dict = {'algorithm': config.algorithm,
+                       'animation': config.animation,
+                       'entry': config.entry,
+                       'exit': config.exit,
+                       'height': config.height,
+                       'output_file': config.output_file,
+                       'perfect': config.perfect,
+                       'seed': config.seed,
+                       'width': config.width}
 
-        gen = MazeGenerator(config)         # set up
+        gen = MazeGenerator(dict(config_dict))         # set up
         gen.generate()                      # build maze
         gen.save()
         if raw.get('animation') is True:
-            render(gen, gen.animate_save_file())
+            render(gen, config_dict, gen.animate_save_file())
         else:
-            render(gen)
+            render(gen, config_dict)
         # display will be: MazeDisplay(gen).show()  ← later
 
     except ConfigFileError as e:

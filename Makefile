@@ -25,10 +25,10 @@ clean:
 # Lint (mandatory flags from subject)
 lint:
 	flake8 .
-	MYPYPATH=src mypy --warn-return-any --warn-unused-ignores \
+	mypy . --warn-return-any --warn-unused-ignores \
 		--ignore-missing-imports \
 		--disallow-untyped-defs \
-		--check-untyped-defs src/mazegen
+		--check-untyped-defs
 
 # Lint strict (optional)
 lint-strict:

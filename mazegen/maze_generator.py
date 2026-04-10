@@ -1,18 +1,17 @@
 import random
 from tqdm import tqdm
-from typing import Optional
-from config_parser import MazeConfig
+from typing import Optional, Any
 
 
 class MazeGenerator():
 
-    def __init__(self, config: MazeConfig) -> None:
+    def __init__(self, config: dict[Any, Any]) -> None:
         """Initialize MazeGenerator with config parameters."""
         self.config = config
-        self.width = config.width
-        self.height = config.height
+        self.width = config.get('width', 4)
+        self.height = config.get('height', 4)
 
-        self.rng = random.Random(config.seed)
+        self.rng = random.Random(config.get('seed', None))
 
         self.grid: list[list[int]] = []
         self.pattern_cells: set[tuple[int, int]] = set()
@@ -97,7 +96,7 @@ class MazeGenerator():
         """Generate maze using Depth-First Search algorithm."""
         print('\n=== Generating Maze with DFS ===\n')
 
-        start_x, start_y = self.config.entry
+        start_x, start_y = self.config.get('entry', (0, 0))
 
         visited: set[tuple[int, int]] = set()
         visited.add((start_x, start_y))
@@ -289,8 +288,8 @@ class MazeGenerator():
             self.WEST:  'W',
         }
 
-        ex, ey = self.config.entry
-        exit_ = self.config.exit
+        ex, ey = self.config.get('entry', (0, 0))
+        exit_ = self.config.get('exit', (1, 1))
 
         # Queue stores (x, y, path_string_so_far)
         queue: deque[tuple[int, int, str]] = deque()
@@ -327,8 +326,8 @@ class MazeGenerator():
           avoiding critical paths."""
         protected: set[tuple[int, int]] = set(self.pattern_cells)
 
-        entry = self.config.entry    # e.g. (0, 0)
-        exit_ = self.config.exit     # e.g. (19, 14)
+        entry = self.config.get('entry', (0, 0))    # e.g. (0, 0)
+        exit_ = self.config.get('exit', (1, 1))     # e.g. (19, 14)
 
         # Protect entry and exit cells directly
         protected.add(entry)
@@ -408,26 +407,26 @@ class MazeGenerator():
             bounds = self._get_pattern_bounds()
             sx, sy, ex, ey = bounds
 
-            if self.config.entry in self.pattern_cells:
+            if self.config.get('entry', (0, 0)) in self.pattern_cells:
                 raise ValueError(
-                    f"ENTRY {self.config.entry} is inside the '42' pattern "
-                    f"(columns {sx}-{ex}, rows {sy}-{ey}). "
+                    f"ENTRY {self.config.get('entry', (0, 0))} is inside the "
+                    f"'42' pattern (columns {sx}-{ex}, rows {sy}-{ey}). "
                     f"Move ENTRY or change SEED."
                 )
 
-            if self.config.exit in self.pattern_cells:
+            if self.config.get('exit', (1, 1)) in self.pattern_cells:
                 raise ValueError(
-                    f"EXIT {self.config.exit} is inside the '42' pattern "
-                    f"(columns {sx}-{ex}, rows {sy}-{ey}). "
+                    f"EXIT {self.config.get('exit', (1, 1))} is inside the "
+                    f"'42' pattern (columns {sx}-{ex}, rows {sy}-{ey}). "
                     f"Move EXIT or change SEED."
                 )
 
-        if self.config.algorithm == 'hunt_and_kill':
+        if self.config.get('algorithm', 'dfs') == 'hunt_and_kill':
             self._run_hunt_and_kill()
         else:
             self._run_dfs()
         self._fix_open_areas()
-        if not self.config.perfect:
+        if not self.config.get('perfect', True):
             self._add_loops()
 
         self._solve()
@@ -443,11 +442,11 @@ class MazeGenerator():
         - exit  coords as "x,y"
         - solution path as string of N/E/S/W
         """
-        ex, ey = self.config.entry
-        exit_ = self.config.exit
+        ex, ey = self.config.get('entry', (0, 0))
+        exit_ = self.config.get('exit', (1, 1))
 
         try:
-            with open(self.config.output_file, 'w') as f:
+            with open(self.config.get('output_file', 'maze.txt'), 'w') as f:
                 for row in self.grid:
                     f.write(''.join(format(cell, 'X') for cell in row) + '\n')
                 f.write('\n')
@@ -468,7 +467,7 @@ class MazeGenerator():
 
     def animate_short_path(self) -> None:
         """Record animation frames for the solution path from entry to exit."""
-        x, y = self.config.entry
+        x, y = self.config.get('entry', (0, 0))
 
         MOVE = {
             'N': (0, -1),

@@ -6,7 +6,7 @@
 #  By: rshikder, lbordana                        +#+  +:+       +#+         #
 #                                              +#+#+#+#+#+   +#+            #
 #  Created: 2026/03/27 17:04:43 by lbordana        #+#    #+#               #
-#  Updated: 2026/04/10 02:36:57 by lbordana        ###   ########.fr        #
+#  Updated: 2026/04/10 18:43:01 by rshikder        ###   ########.fr        #
 #                                                                           #
 # ************************************************************************* #
 
@@ -14,11 +14,10 @@ from mlx import Mlx  # type: ignore[import-untyped]
 from PIL import Image, ImageDraw, ImageFont
 from PIL.Image import Image as PillowImage
 from typing import Any
-from src.mazegen import MazeGenerator
+from mazegen import MazeGenerator
 import numpy as np
 import cv2
 from typing import Generator
-from config_parser import read_config
 
 
 class Keys():
@@ -851,8 +850,8 @@ class Controler(MazeFront):
 
 
 def render(gen: MazeGenerator,
+           config: dict[Any, Any],
            animation: list[list[int | str]] | None = None) -> None:
-    config = read_config("config.txt")
     m = Controler(config)
     m.maze_gen = gen
     if animation is not None:
