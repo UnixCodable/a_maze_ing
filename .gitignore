@@ -6,11 +6,7 @@ __pycache__/
 *.py[cod]
 
 # Build and Packaging
-build/
-dist/
 *.egg-info/
-*.whl
-*.tar.gz
 
 # Virtual environments
 venv/
