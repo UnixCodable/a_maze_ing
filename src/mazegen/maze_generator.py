@@ -87,7 +87,7 @@ class MazeGenerator():
         return (min(xs), min(ys), max(xs), max(ys))
 
     def _run_dfs(self) -> None:
-        
+
         print('\n=== Generating Maze with DFS ===\n')
 
         start_x, start_y = self.config.entry
@@ -359,7 +359,7 @@ class MazeGenerator():
         # ── Shuffle and remove walls
         self.rng.shuffle(candidates)
 
-        loop_count = int(len(candidates) * 0.02)
+        loop_count = int(len(candidates) * 0.2)
 
         for x, y, direction in candidates[:loop_count]:
             self._carve_wall(x, y, direction)
